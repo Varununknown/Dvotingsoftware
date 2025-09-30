@@ -20,11 +20,6 @@ export default defineConfig(({ mode }) => {
       }
     },
     
-    // Dependencies optimization
-    optimizeDeps: {
-      exclude: ['lucide-react'],
-    },
-    
     // Production build settings
     build: {
       outDir: 'dist',

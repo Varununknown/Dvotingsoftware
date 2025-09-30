@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Vote, Building, Shield, Users, CheckCircle, Globe } from 'lucide-react';
 
-const LandingPage = () => {
+const LandingPage: React.FC = () => {
   const navigate = useNavigate();
 
   return (
