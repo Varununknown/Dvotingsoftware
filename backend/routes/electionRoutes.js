@@ -67,6 +67,48 @@ router.put("/:id/status", async (req, res) => {
   }
 });
 
+// 👉 Release election results
+router.put("/:id/release-results", async (req, res) => {
+  try {
+    const { releaseMessage, releaseType } = req.body;
+    
+    const election = await Election.findById(req.params.id);
+    if (!election) {
+      return res.status(404).json({ message: "Election not found" });
+    }
+
+    election.resultsReleased = true;
+    election.resultsReleasedAt = new Date();
+    election.resultReleaseMessage = releaseMessage || `Results for ${election.title} have been officially released!`;
+    election.resultReleaseType = releaseType || "standard";
+    
+    await election.save();
+    res.json({ message: "Election results released successfully ✅", election });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 👉 Unrelease election results (hide results again)
+router.put("/:id/unrelease-results", async (req, res) => {
+  try {
+    const election = await Election.findById(req.params.id);
+    if (!election) {
+      return res.status(404).json({ message: "Election not found" });
+    }
+
+    election.resultsReleased = false;
+    election.resultsReleasedAt = undefined;
+    election.resultReleaseMessage = undefined;
+    election.resultReleaseType = "standard";
+    
+    await election.save();
+    res.json({ message: "Election results hidden successfully ✅", election });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 👉 Delete election
 router.delete("/:id", async (req, res) => {
   try {

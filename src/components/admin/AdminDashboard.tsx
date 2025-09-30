@@ -76,7 +76,7 @@ const AdminDashboard = () => {
 
       // Call backend API to release results
       const response = await fetch(`${API_BASE_URL}/elections/${electionId}/release-results`, {
-        method: 'POST',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -105,6 +105,80 @@ const AdminDashboard = () => {
       }
     } catch (error) {
       console.error('Error releasing results:', error);
+    }
+  };
+
+  const handleUnreleaseResults = async (electionId: string) => {
+    try {
+      const election = elections.find(e => e.id === electionId);
+      if (!election) return;
+
+      // Call backend API to unrelease results
+      const response = await fetch(`${API_BASE_URL}/elections/${electionId}/unrelease-results`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Update local state
+        updateElection(electionId, { 
+          resultsReleased: false, 
+          resultsReleasedAt: undefined 
+        });
+
+        // Notify sync service for cross-device updates
+        await syncService.notifyAdminAction('RESULTS_UNRELEASED', {
+          electionId,
+          electionTitle: election.title
+        });
+
+        console.log('Results hidden successfully!');
+      } else {
+        console.error('Failed to hide results');
+      }
+    } catch (error) {
+      console.error('Error hiding results:', error);
+    }
+  };
+
+  const handleDeleteElection = async (electionId: string) => {
+    try {
+      const election = elections.find(e => e.id === electionId);
+      if (!election) return;
+
+      // Confirmation dialog for safety
+      const confirmed = window.confirm(
+        `⚠️ DANGER: Delete "${election.title}"?\n\nThis action CANNOT be undone!\n\n` +
+        `• All votes will be permanently lost\n` +
+        `• Election data will be completely removed\n` +
+        `• Voters will no longer see this election\n\n` +
+        `Are you absolutely sure?`
+      );
+
+      if (!confirmed) return;
+
+      // Call backend API to delete election
+      const response = await fetch(`${API_BASE_URL}/elections/${electionId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Remove from local state (preserving other elections)
+        window.location.reload(); // Safe reload to ensure state consistency
+
+        console.log('Election deleted successfully!');
+      } else {
+        console.error('Failed to delete election');
+        alert('Failed to delete election. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error deleting election:', error);
+      alert('Error deleting election. Please try again.');
     }
   };
 
@@ -320,7 +394,7 @@ const AdminDashboard = () => {
                       </div>
                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-4">
+                    <div className="grid md:grid-cols-3 gap-4 mb-6">
                       {election.candidates.map((candidate) => (
                         <div key={candidate.id} className="bg-white/50 rounded-xl p-4 border border-white/30">
                           <img 
@@ -338,6 +412,38 @@ const AdminDashboard = () => {
                           </div>
                         </div>
                       ))}
+                    </div>
+
+                    {/* Election Action Buttons */}
+                    <div className="flex flex-wrap gap-3 pt-4 border-t border-white/30">
+                      {election.status === 'closed' && (
+                        <button
+                          onClick={() => election.resultsReleased ? handleUnreleaseResults(election.id) : handleReleaseResults(election.id)}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center space-x-2 ${
+                            election.resultsReleased 
+                              ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' 
+                              : 'bg-green-100 text-green-700 hover:bg-green-200'
+                          }`}
+                        >
+                          <Megaphone className="h-4 w-4" />
+                          <span>{election.resultsReleased ? 'Hide Results' : 'Release Results'}</span>
+                        </button>
+                      )}
+                      
+                      <button
+                        onClick={() => handleDeleteElection(election.id)}
+                        className="px-4 py-2 rounded-lg text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors duration-200 flex items-center space-x-2"
+                      >
+                        <AlertCircle className="h-4 w-4" />
+                        <span>Delete Election</span>
+                      </button>
+                      
+                      {election.resultsReleased && (
+                        <div className="px-3 py-1 bg-green-50 text-green-700 text-xs rounded-full border border-green-200 flex items-center space-x-1">
+                          <CheckCircle className="h-3 w-3" />
+                          <span>Results Published</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
