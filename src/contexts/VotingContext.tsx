@@ -68,11 +68,11 @@ export const useVoting = () => {
   return context;
 };
 
-export // API Configuration
+// API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 console.log('🌐 Using API URL:', API_BASE_URL);
 
-const VotingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const VotingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Initialize user from localStorage if available
   const [currentUser, setCurrentUser] = useState<Voter | null>(() => {
     const savedUser = localStorage.getItem('currentVoter');
