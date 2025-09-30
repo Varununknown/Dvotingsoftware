@@ -166,17 +166,17 @@ const VoterLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 py-8">
-      <div className="max-w-md mx-auto px-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 py-4 sm:py-8">
+      <div className="max-w-md mx-auto px-4 sm:px-6">
         {/* Header */}
-        <div className="flex items-center mb-8">
+        <div className="flex items-center mb-6 sm:mb-8">
           <button
             onClick={() => navigate('/')}
-            className="p-2 rounded-lg bg-white/70 backdrop-blur-sm border border-white/20 hover:bg-white/80 transition-colors duration-200"
+            className="p-1.5 sm:p-2 rounded-lg bg-white/70 backdrop-blur-sm border border-white/20 hover:bg-white/80 transition-colors duration-200"
           >
-            <ArrowLeft className="h-5 w-5 text-slate-600" />
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 text-slate-600" />
           </button>
-          <h1 className="text-2xl font-bold text-slate-800 ml-4">Voter Login</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 ml-3 sm:ml-4">Voter Login</h1>
         </div>
         
         {/* Progress Indicator */}

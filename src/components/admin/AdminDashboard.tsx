@@ -24,7 +24,8 @@ import {
   Eye,
   Trophy,
   Megaphone,
-  Send
+  Send,
+  Menu
 } from 'lucide-react';
 import CreateElectionModal from './CreateElectionModal';
 
@@ -33,6 +34,7 @@ const AdminDashboard = () => {
   const { elections, setIsAdmin, updateElection } = useVoting();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = () => {
     setIsAdmin(false);
@@ -109,8 +111,16 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <div className="flex">
+        {/* Mobile Menu Toggle */}
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white/70 backdrop-blur-sm border border-white/20 hover:bg-white/80 transition-colors duration-200"
+        >
+          <Menu className="h-6 w-6 text-slate-600" />
+        </button>
+
         {/* Sidebar */}
-        <div className="w-64 bg-white/70 backdrop-blur-sm border-r border-white/20 min-h-screen p-6">
+        <div className={`${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white/70 backdrop-blur-sm border-r border-white/20 min-h-screen p-4 lg:p-6 transition-transform duration-300 ease-in-out overflow-y-auto`}>
           <div className="flex items-center space-x-3 mb-8">
             <div className="p-2 bg-amber-600 rounded-lg">
               <Building className="h-6 w-6 text-white" />
@@ -149,15 +159,26 @@ const AdminDashboard = () => {
           </div>
         </div>
 
+        {/* Overlay for mobile when sidebar is open */}
+        {isMobileMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
+
         {/* Main Content */}
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-4 lg:p-6 lg:ml-0">
+          {/* Mobile Header Space */}
+          <div className="lg:hidden h-16 mb-4"></div>
+          
           {activeTab === 'dashboard' && (
             <div>
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-3xl font-bold text-slate-800">Dashboard Overview</h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 lg:mb-8 gap-4">
+                <h2 className="text-2xl lg:text-3xl font-bold text-slate-800">Dashboard Overview</h2>
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-6 py-3 rounded-xl font-medium hover:from-amber-600 hover:to-amber-700 transition-colors duration-200 flex items-center space-x-2"
+                  className="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 lg:px-6 py-2.5 lg:py-3 rounded-xl font-medium hover:from-amber-600 hover:to-amber-700 transition-colors duration-200 flex items-center justify-center space-x-2"
                 >
                   <Plus className="h-5 w-5" />
                   <span>Create Election</span>

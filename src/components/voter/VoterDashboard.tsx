@@ -21,7 +21,8 @@ import {
   SortAsc,
   SortDesc,
   PieChart,
-  Bell
+  Bell,
+  Menu
 } from 'lucide-react';
 import VotingModal from './VotingModal';
 import ElectionResultsModal from './ElectionResultsModal';
@@ -61,6 +62,7 @@ const VoterDashboard = () => {
   const [dateFilter, setDateFilter] = useState<'all' | 'thisWeek' | 'thisMonth'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Initialize election notifications
   useElectionNotifications(elections);
@@ -146,8 +148,16 @@ const VoterDashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       <div className="flex">
+        {/* Mobile Menu Toggle */}
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white/70 backdrop-blur-sm border border-white/20 hover:bg-white/80 transition-colors duration-200"
+        >
+          <Menu className="h-6 w-6 text-slate-600" />
+        </button>
+
         {/* Sidebar */}
-        <div className="w-64 bg-white/70 backdrop-blur-sm border-r border-white/20 min-h-screen p-6">
+        <div className={`${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white/70 backdrop-blur-sm border-r border-white/20 min-h-screen p-4 lg:p-6 transition-transform duration-300 ease-in-out overflow-y-auto`}>
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-blue-600 rounded-lg">
@@ -190,15 +200,26 @@ const VoterDashboard = () => {
           </div>
         </div>
 
+        {/* Overlay for mobile when sidebar is open */}
+        {isMobileMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
+
         {/* Main Content */}
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-4 lg:p-6 lg:ml-0">
+          {/* Mobile Header Space */}
+          <div className="lg:hidden h-16 mb-4"></div>
+          
           {/* Blockchain Connection Status */}
-          <WalletConnection className="mb-6" />
+          <WalletConnection className="mb-4 lg:mb-6" />
           
           {/* Search and Filter Bar - only show for election tabs */}
           {(activeTab === 'active' || activeTab === 'upcoming' || activeTab === 'results') && (
-            <div className="mb-6">
-              <div className="flex flex-wrap items-center gap-3">
+            <div className="mb-4 lg:mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="relative flex-grow max-w-md">
                   <input
                     type="text"
@@ -212,7 +233,7 @@ const VoterDashboard = () => {
                 
                 <button 
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`flex items-center space-x-2 py-2 px-4 rounded-xl transition-colors duration-200 ${
+                  className={`flex items-center justify-center space-x-2 py-2 px-4 rounded-xl transition-colors duration-200 ${
                     showFilters ? 'bg-blue-100 text-blue-700' : 'bg-white/70 backdrop-blur-sm border border-white/20 text-slate-600'
                   }`}
                 >

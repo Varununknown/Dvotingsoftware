@@ -471,35 +471,35 @@ const VoterRegistration = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 py-8">
-      <div className="max-w-md mx-auto px-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 py-4 sm:py-8">
+      <div className="max-w-md mx-auto px-4 sm:px-6">
         {/* Header */}
-        <div className="flex items-center mb-8">
+        <div className="flex items-center mb-6 sm:mb-8">
           <button
             onClick={() => navigate('/')}
-            className="p-2 rounded-lg bg-white/70 backdrop-blur-sm border border-white/20 hover:bg-white/80 transition-colors duration-200"
+            className="p-1.5 sm:p-2 rounded-lg bg-white/70 backdrop-blur-sm border border-white/20 hover:bg-white/80 transition-colors duration-200"
           >
-            <ArrowLeft className="h-5 w-5 text-slate-600" />
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 text-slate-600" />
           </button>
-          <h1 className="text-2xl font-bold text-slate-800 ml-4">Voter Registration</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 ml-3 sm:ml-4">Voter Registration</h1>
         </div>
 
         {/* Progress Indicator */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6 sm:mb-8">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="flex items-center">
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
+                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold ${
                   i <= step
                     ? 'bg-blue-600 text-white'
                     : 'bg-white/70 text-slate-400 border border-slate-200'
                 }`}
               >
-                {i < step ? <CheckCircle className="h-5 w-5" /> : i}
+                {i < step ? <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" /> : i}
               </div>
               {i < 4 && (
                 <div
-                  className={`w-12 h-0.5 ml-2 ${
+                  className={`w-8 sm:w-12 h-0.5 ml-1 sm:ml-2 ${
                     i < step ? 'bg-blue-600' : 'bg-slate-200'
                   }`}
                 />
@@ -509,14 +509,14 @@ const VoterRegistration = () => {
         </div>
 
         {/* Main Card */}
-        <div className="bg-white/70 backdrop-blur-sm border border-white/20 rounded-3xl p-8 shadow-xl">
+        <div className="bg-white/70 backdrop-blur-sm border border-white/20 rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xl">
           {step === 1 && (
             <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <User className="h-8 w-8 text-white" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                <User className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-slate-800 mb-4">Enter Aadhaar ID</h2>
-              <p className="text-slate-600 mb-8">Enter your 12-digit Aadhaar number to register.</p>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-3 sm:mb-4">Enter Aadhaar ID</h2>
+              <p className="text-sm sm:text-base text-slate-600 mb-6 sm:mb-8">Enter your 12-digit Aadhaar number to register.</p>
               
               <form onSubmit={handleAadhaarSubmit}>
                 <input
