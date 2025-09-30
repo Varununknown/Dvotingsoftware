@@ -100,7 +100,6 @@ const LandingPage: React.FC = () => {
                   <Building className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                 </div>
                 
-                                </div>
                 
                 <h3 className="text-xl sm:text-2xl font-bold text-slate-800 mb-3 sm:mb-4">
                   Election Commission �️
