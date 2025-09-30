@@ -87,13 +87,13 @@ app.use(express.urlencoded({ extended: true }));
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production'
     ? [
-        // Add your production domain(s) here
-        process.env.FRONTEND_URL || 'https://your-production-domain.com',
-        // You can keep these for testing, or remove them in production
+        // Split multiple URLs from environment variable
+        ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map(url => url.trim()) : []),
+        // Default production domains
         'http://localhost:5173',
         'http://localhost:5174'
       ]
-    : ['http://localhost:5173', 'http://localhost:5174'],
+    : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
   credentials: true,
   optionsSuccessStatus: 200
 };

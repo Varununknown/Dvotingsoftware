@@ -68,7 +68,11 @@ export const useVoting = () => {
   return context;
 };
 
-export const VotingProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export // API Configuration
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+console.log('🌐 Using API URL:', API_BASE_URL);
+
+const VotingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Initialize user from localStorage if available
   const [currentUser, setCurrentUser] = useState<Voter | null>(() => {
     const savedUser = localStorage.getItem('currentVoter');
@@ -85,7 +89,7 @@ export const VotingProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const loadElections = async () => {
     try {
       console.log('🔄 Loading elections from database...');
-      const response = await fetch('http://localhost:5000/api/elections');
+      const response = await fetch(`${API_BASE_URL}/elections`);
       if (response.ok) {
         const electionsData = await response.json();
         console.log('📊 Raw elections loaded:', electionsData);
@@ -128,7 +132,7 @@ export const VotingProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const addElection = async (election: Election) => {
     try {
       // Save to database first
-      const response = await fetch('http://localhost:5000/api/elections/create', {
+      const response = await fetch(`${API_BASE_URL}/elections/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -247,7 +251,7 @@ export const VotingProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     // **DATABASE PERSISTENCE - Save vote to database**
     try {
       console.log('💾 Saving vote to database...');
-      const response = await fetch(`http://localhost:5000/api/voting/cast-vote`, {
+      const response = await fetch(`${API_BASE_URL}/voting/cast-vote`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
