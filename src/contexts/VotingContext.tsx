@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import web3Service from '../services/web3Service';
 import syncService from '../services/syncService';
-import { BlockchainResultsService } from '../services/blockchainResultsService';
+import { BlockchainResultsService, BlockchainElectionResult } from '../services/blockchainResultsService';
 
 export interface Candidate {
   id: string;
@@ -379,7 +379,7 @@ const VotingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =
         
         // Convert blockchain results to the expected format
         const results: Record<string, number> = {};
-        blockchainResults.candidates.forEach(candidate => {
+        blockchainResults.candidates.forEach((candidate: BlockchainElectionResult) => {
           results[candidate.candidateId] = candidate.voteCount;
         });
         
