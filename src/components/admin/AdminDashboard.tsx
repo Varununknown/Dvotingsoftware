@@ -26,7 +26,12 @@ import {
   Trophy,
   Megaphone,
   Send,
-  Menu
+  Menu,
+  Search,
+  Trash2,
+  UserX,
+  Filter,
+  Shield
 } from 'lucide-react';
 import CreateElectionModal from './CreateElectionModal';
 
@@ -36,6 +41,13 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // User Management State
+  const [voters, setVoters] = useState([]);
+  const [voterStats, setVoterStats] = useState({ totalVoters: 0, verifiedVoters: 0, votersWhoVoted: 0 });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all'); // all, verified, unverified
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   const handleLogout = () => {
     setIsAdmin(false);
@@ -54,6 +66,7 @@ const AdminDashboard = () => {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'elections', label: 'Manage Elections', icon: Vote },
     { id: 'candidates', label: 'Candidates', icon: Users },
+    { id: 'users', label: 'User Management', icon: Shield },
     { id: 'results', label: 'Results & Analytics', icon: BarChart3 },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -178,10 +191,80 @@ const AdminDashboard = () => {
         alert('Failed to delete election. Please try again.');
       }
     } catch (error) {
-      console.error('Error deleting election:', error);
+      console.error('Error deleting election. Please try again.');
       alert('Error deleting election. Please try again.');
     }
   };
+
+  // User Management Functions
+  const fetchAllVoters = async () => {
+    setLoadingUsers(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/voters/admin/all`);
+      if (response.ok) {
+        const data = await response.json();
+        setVoters(data.voters);
+        setVoterStats(data.stats);
+      } else {
+        console.error('Failed to fetch voters');
+      }
+    } catch (error) {
+      console.error('Error fetching voters:', error);
+    }
+    setLoadingUsers(false);
+  };
+
+  const handleRemoveUser = async (voterId: string, voterName: string, aadhaarId: string) => {
+    const confirmed = window.confirm(
+      `⚠️ DANGER: Remove voter "${voterName}"?\n\n` +
+      `Aadhaar ID: ${aadhaarId}\n\n` +
+      `This action CANNOT be undone!\n\n` +
+      `• All voting history will be permanently lost\n` +
+      `• User will need to re-register to vote again\n` +
+      `• This may affect election integrity\n\n` +
+      `Are you absolutely sure?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/voters/admin/${voterId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Refresh the voter list
+        await fetchAllVoters();
+        alert('User removed successfully! ✅');
+      } else {
+        console.error('Failed to remove user');
+        alert('Failed to remove user. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error removing user:', error);
+      alert('Error removing user. Please try again.');
+    }
+  };
+
+  // Load voters when switching to users tab
+  React.useEffect(() => {
+    if (activeTab === 'users') {
+      fetchAllVoters();
+    }
+  }, [activeTab]);
+
+  // Filter voters based on search and status
+  const filteredVoters = voters.filter(voter => {
+    const matchesSearch = voter.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         voter.aadhaarId.includes(searchTerm);
+    const matchesFilter = filterStatus === 'all' || 
+                         (filterStatus === 'verified' && voter.isVerified) ||
+                         (filterStatus === 'unverified' && !voter.isVerified);
+    return matchesSearch && matchesFilter;
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -657,6 +740,170 @@ const AdminDashboard = () => {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {activeTab === 'users' && (
+            <div>
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-3xl font-bold text-slate-800">User Management</h2>
+                <button
+                  onClick={fetchAllVoters}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2"
+                  disabled={loadingUsers}
+                >
+                  <Shield className="h-4 w-4" />
+                  <span>{loadingUsers ? 'Loading...' : 'Refresh'}</span>
+                </button>
+              </div>
+
+              {/* User Statistics */}
+              <div className="grid md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-white/70 backdrop-blur-sm border border-white/20 rounded-2xl p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-slate-600 text-sm">Total Users</p>
+                      <p className="text-2xl font-bold text-blue-600">{voterStats.totalVoters}</p>
+                    </div>
+                    <Users className="h-8 w-8 text-blue-600" />
+                  </div>
+                </div>
+                
+                <div className="bg-white/70 backdrop-blur-sm border border-white/20 rounded-2xl p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-slate-600 text-sm">Verified Users</p>
+                      <p className="text-2xl font-bold text-green-600">{voterStats.verifiedVoters}</p>
+                    </div>
+                    <CheckCircle className="h-8 w-8 text-green-600" />
+                  </div>
+                </div>
+                
+                <div className="bg-white/70 backdrop-blur-sm border border-white/20 rounded-2xl p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-slate-600 text-sm">Active Voters</p>
+                      <p className="text-2xl font-bold text-purple-600">{voterStats.votersWhoVoted}</p>
+                    </div>
+                    <Vote className="h-8 w-8 text-purple-600" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Search and Filter */}
+              <div className="bg-white/70 backdrop-blur-sm border border-white/20 rounded-2xl p-6 mb-6">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1 relative">
+                    <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search by name or Aadhaar ID..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div className="sm:w-48">
+                    <select
+                      value={filterStatus}
+                      onChange={(e) => setFilterStatus(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="all">All Users</option>
+                      <option value="verified">Verified Only</option>
+                      <option value="unverified">Unverified Only</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* User List */}
+              <div className="bg-white/70 backdrop-blur-sm border border-white/20 rounded-2xl overflow-hidden">
+                {loadingUsers ? (
+                  <div className="p-8 text-center">
+                    <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p className="text-slate-600">Loading users...</p>
+                  </div>
+                ) : filteredVoters.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <UserX className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-slate-600 mb-2">No Users Found</h3>
+                    <p className="text-slate-500">
+                      {searchTerm || filterStatus !== 'all' 
+                        ? 'Try adjusting your search or filter criteria.' 
+                        : 'No registered users in the system yet.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-slate-50 border-b">
+                        <tr>
+                          <th className="text-left p-4 font-medium text-slate-700">User Info</th>
+                          <th className="text-left p-4 font-medium text-slate-700">Status</th>
+                          <th className="text-left p-4 font-medium text-slate-700">Voting Activity</th>
+                          <th className="text-left p-4 font-medium text-slate-700">Registered</th>
+                          <th className="text-center p-4 font-medium text-slate-700">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredVoters.map((voter, index) => (
+                          <tr key={voter._id} className={`border-b ${index % 2 === 0 ? 'bg-white/50' : 'bg-slate-50/50'} hover:bg-blue-50/50 transition-colors duration-200`}>
+                            <td className="p-4">
+                              <div>
+                                <p className="font-medium text-slate-800">{voter.name}</p>
+                                <p className="text-sm text-slate-600">ID: ****{voter.aadhaarId.slice(-4)}</p>
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                voter.isVerified 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {voter.isVerified ? 'Verified' : 'Pending'}
+                              </span>
+                            </td>
+                            <td className="p-4">
+                              <div className="text-sm">
+                                {Object.keys(voter.hasVoted || {}).length > 0 ? (
+                                  <div>
+                                    <p className="text-green-600 font-medium">Active Voter</p>
+                                    <p className="text-slate-500">{Object.keys(voter.hasVoted).length} elections</p>
+                                  </div>
+                                ) : (
+                                  <p className="text-slate-500">No votes yet</p>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <p className="text-sm text-slate-600">
+                                {new Date(voter.createdAt).toLocaleDateString()}
+                              </p>
+                            </td>
+                            <td className="p-4 text-center">
+                              <button
+                                onClick={() => handleRemoveUser(voter._id, voter.name, voter.aadhaarId)}
+                                className="px-3 py-1 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center space-x-1 mx-auto"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                                <span>Remove</span>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Results Summary */}
+              {!loadingUsers && filteredVoters.length > 0 && (
+                <div className="mt-4 text-center text-sm text-slate-600">
+                  Showing {filteredVoters.length} of {voters.length} users
+                </div>
+              )}
             </div>
           )}
 

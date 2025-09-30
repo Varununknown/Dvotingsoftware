@@ -309,4 +309,60 @@ router.post('/:id/vote', async (req, res) => {
   }
 });
 
+// 👉 ADMIN ONLY: Get all voters for user management
+router.get("/admin/all", async (req, res) => {
+  try {
+    const voters = await Voter.find({}, {
+      aadhaarId: 1,
+      name: 1,
+      isVerified: 1,
+      hasVoted: 1,
+      votingHistory: 1,
+      createdAt: 1,
+      lastLogin: 1
+    }).sort({ createdAt: -1 });
+
+    // Add statistics
+    const stats = {
+      totalVoters: voters.length,
+      verifiedVoters: voters.filter(v => v.isVerified).length,
+      votersWhoVoted: voters.filter(v => Object.keys(v.hasVoted || {}).length > 0).length
+    };
+
+    res.json({ voters, stats });
+  } catch (err) {
+    console.error('Error fetching all voters:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 👉 ADMIN ONLY: Delete voter by ID
+router.delete("/admin/:voterId", async (req, res) => {
+  try {
+    const { voterId } = req.params;
+    
+    const voter = await Voter.findById(voterId);
+    if (!voter) {
+      return res.status(404).json({ message: "Voter not found" });
+    }
+
+    // Store voter info for response
+    const voterInfo = {
+      aadhaarId: voter.aadhaarId,
+      name: voter.name,
+      wasVerified: voter.isVerified
+    };
+
+    await Voter.findByIdAndDelete(voterId);
+    
+    res.json({ 
+      message: "Voter removed successfully ✅", 
+      removedVoter: voterInfo 
+    });
+  } catch (err) {
+    console.error('Error deleting voter:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
