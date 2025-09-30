@@ -135,7 +135,8 @@ const VoterDashboard = () => {
 
   const activeElections = filterElections(elections.filter(e => e.status === 'active'));
   const upcomingElections = filterElections(elections.filter(e => e.status === 'upcoming'));
-  const closedElections = filterElections(elections.filter(e => e.status === 'closed'));
+  // Only show elections where results are explicitly released by admin
+  const closedElections = filterElections(elections.filter(e => e.status === 'closed' && e.resultsReleased === true));
 
   const menuItems = [
     { id: 'profile', label: 'Profile', icon: User },

@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Trophy, Medal, Hash, BarChart3, UserCheck, Clock, CalendarDays } from 'lucide-react';
 import { Election } from '../../contexts/VotingContext';
+import ShareButton from '../ShareButton';
 
 interface ElectionResultsModalProps {
   election: Election;
@@ -50,12 +51,36 @@ const ElectionResultsModal: React.FC<ElectionResultsModalProps> = ({ election, o
               CLOSED
             </span>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors duration-200"
-          >
-            <X className="h-5 w-5 text-slate-500" />
-          </button>
+          <div className="flex items-center space-x-3">
+            {/* Share Button */}
+            {totalVotes > 0 && winner && (
+              <ShareButton 
+                electionTitle={election.title}
+                electionId={election.id}
+                results={{
+                  winner: {
+                    name: winner.name,
+                    party: winner.party,
+                    votes: winner.votes,
+                    percentage: winner.percentage.toFixed(1)
+                  },
+                  totalVotes,
+                  candidates: sortedCandidates.map(c => ({
+                    name: c.name,
+                    party: c.party,
+                    votes: c.votes,
+                    percentage: c.percentage.toFixed(1)
+                  }))
+                }}
+              />
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-slate-100 rounded-full transition-colors duration-200"
+            >
+              <X className="h-5 w-5 text-slate-500" />
+            </button>
+          </div>
         </div>
         
         <div className="grid md:grid-cols-2 gap-6 mb-8">

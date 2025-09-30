@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVoting } from '../../contexts/VotingContext';
 import syncService from '../../services/syncService';
+import ShareButton from '../ShareButton';
 
 // API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://dvotingsoftware.onrender.com/api';
@@ -478,13 +479,38 @@ const AdminDashboard = () => {
                             <p className="text-slate-600">Total Votes: {totalVotes.toLocaleString()}</p>
                           </div>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          election.status === 'active' ? 'bg-green-100 text-green-800' :
-                          election.status === 'upcoming' ? 'bg-blue-100 text-blue-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {election.status.toUpperCase()}
-                        </span>
+                        <div className="flex items-center space-x-3">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            election.status === 'active' ? 'bg-green-100 text-green-800' :
+                            election.status === 'upcoming' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {election.status.toUpperCase()}
+                          </span>
+                          
+                          {/* Share button for released results */}
+                          {election.status === 'closed' && election.resultsReleased && totalVotes > 0 && winner && (
+                            <ShareButton 
+                              electionTitle={election.title}
+                              electionId={election.id}
+                              results={{
+                                winner: {
+                                  name: winner.name,
+                                  party: winner.party,
+                                  votes: winner.votes,
+                                  percentage: winner.percentage
+                                },
+                                totalVotes,
+                                candidates: sortedCandidates.map(c => ({
+                                  name: c.name,
+                                  party: c.party,
+                                  votes: c.votes,
+                                  percentage: c.percentage
+                                }))
+                              }}
+                            />
+                          )}
+                        </div>
                       </div>
 
                       {totalVotes > 0 && (
