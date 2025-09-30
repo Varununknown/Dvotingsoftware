@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useVoting } from '../../contexts/VotingContext';
 import { ArrowLeft, Fingerprint, AlertCircle, CheckCircle, User, Smartphone, ShieldAlert, Copy, X } from 'lucide-react';
 
+// API Configuration
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+console.log('🌐 VoterLogin using API URL:', API_BASE_URL);
+
 const VoterLogin = () => {
   const navigate = useNavigate();
   const { setCurrentUser, refreshUserData } = useVoting();
@@ -71,7 +75,7 @@ const VoterLogin = () => {
     setError('');
     if (otp.length === 6) {
       try {
-        const response = await fetch('http://localhost:5000/api/voters/verify-otp', {
+        const response = await fetch(`${API_BASE_URL}/voters/verify-otp`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -104,7 +108,7 @@ const VoterLogin = () => {
       try {
         const simulatedHash = 'fp_' + Math.random().toString(36).substring(2, 10);
         // Use the verify endpoint instead of simulate
-        const response = await fetch('http://localhost:5000/api/webauthn/fingerprint/verify', {
+        const response = await fetch(`${API_BASE_URL}/webauthn/fingerprint/verify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ aadhaarId, fingerprintHash: simulatedHash })
@@ -293,7 +297,7 @@ const VoterLogin = () => {
                   type="button"
                   onClick={async () => {
                     try {
-                      const response = await fetch('http://localhost:5000/api/voters/request-otp', {
+                      const response = await fetch(`${API_BASE_URL}/voters/request-otp`, {
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',

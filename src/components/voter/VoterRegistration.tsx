@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Smartphone, Fingerprint, AlertCircle, CheckCircle, ShieldAlert, Shield, Info, X, Copy } from 'lucide-react';
 import { useVoting } from '../../contexts/VotingContext';
 
+// API Configuration  
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+console.log('🌐 VoterRegistration using API URL:', API_BASE_URL);
+
 // Helper function to convert base64url to Uint8Array - commented out
 /*
 function base64URLToUint8Array(base64URLString: string): Uint8Array {
@@ -73,7 +77,7 @@ const VoterRegistration = () => {
     if (aadhaarId.length === 12) {
       try {
         // First check if the voter already exists
-        const checkResponse = await fetch('http://localhost:5000/api/voters/check', {
+        const checkResponse = await fetch(`${API_BASE_URL}/voters/check`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -97,7 +101,7 @@ const VoterRegistration = () => {
         }
         
         // If new voter, proceed with registration
-        const response = await fetch('http://localhost:5000/api/voters/register', {
+        const response = await fetch(`${API_BASE_URL}/voters/register`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -137,7 +141,7 @@ const VoterRegistration = () => {
     e.preventDefault();
     if (otp.length === 6) {
       try {
-        const response = await fetch('http://localhost:5000/api/voters/verify-otp', {
+        const response = await fetch(`${API_BASE_URL}/voters/verify-otp`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -181,7 +185,7 @@ const VoterRegistration = () => {
     setTimeout(async () => {
       try {
         const simulatedHash = 'fp_' + Math.random().toString(36).substring(2, 10);
-        const response = await fetch('http://localhost:5000/api/webauthn/fingerprint/simulate', {
+        const response = await fetch(`${API_BASE_URL}/webauthn/fingerprint/simulate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ aadhaarId, fingerprintHash: simulatedHash })
@@ -234,7 +238,7 @@ const VoterRegistration = () => {
       });
       
       // Step 1: Get registration options from server
-      const optionsResponse = await fetch('http://localhost:5000/api/webauthn/register/options', {
+      const optionsResponse = await fetch(`${API_BASE_URL}/webauthn/register/options`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ aadhaarId })
@@ -334,7 +338,7 @@ const VoterRegistration = () => {
       
       console.log('Sending verification request to server...');
       
-      const verificationResponse = await fetch('http://localhost:5000/api/webauthn/register/verify', {
+      const verificationResponse = await fetch(`${API_BASE_URL}/webauthn/register/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
