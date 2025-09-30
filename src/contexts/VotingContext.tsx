@@ -69,7 +69,7 @@ export const useVoting = () => {
 };
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://dvotingsoftware.onrender.com/api';
 console.log('🌐 Using API URL:', API_BASE_URL);
 
 export const VotingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -172,7 +172,7 @@ export const VotingProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       // Handle status updates via API
       if (updates.status) {
         console.log(`🔄 Updating election ${electionId} status to ${updates.status}`);
-        const response = await fetch(`http://localhost:5000/api/elections/${electionId}/status`, {
+        const response = await fetch(`${API_BASE_URL}/elections/${electionId}/status`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -330,7 +330,7 @@ export const VotingProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Sync with backend
     try {
       console.log('💾 Syncing vote with backend...');
-      const response = await fetch(`http://localhost:5000/api/voters/${currentUser.id}/vote`, {
+      const response = await fetch(`${API_BASE_URL}/voters/${currentUser.id}/vote`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -421,7 +421,7 @@ export const VotingProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const refreshUserData = async (userId: string) => {
     try {
       console.log(`Refreshing user data for userId: ${userId}`);
-      const response = await fetch(`http://localhost:5000/api/voters/${userId}`);
+      const response = await fetch(`${API_BASE_URL}/voters/${userId}`);
       
       if (response.ok) {
         const userData = await response.json();

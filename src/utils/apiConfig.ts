@@ -1,5 +1,5 @@
 // API Configuration for Production and Development
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://dvotingsoftware.onrender.com/api';
 
 export const apiConfig = {
   baseURL: API_BASE_URL,

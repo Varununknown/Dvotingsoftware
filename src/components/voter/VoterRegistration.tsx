@@ -4,7 +4,7 @@ import { ArrowLeft, User, Smartphone, Fingerprint, AlertCircle, CheckCircle, Shi
 import { useVoting } from '../../contexts/VotingContext';
 
 // API Configuration  
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://dvotingsoftware.onrender.com/api';
 console.log('🌐 VoterRegistration using API URL:', API_BASE_URL);
 
 // Helper function to convert base64url to Uint8Array - commented out

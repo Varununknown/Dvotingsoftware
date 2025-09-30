@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVoting } from '../../contexts/VotingContext';
 import syncService from '../../services/syncService';
+
+// API Configuration
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://dvotingsoftware.onrender.com/api';
+
 import { 
   LayoutDashboard, 
   Plus, 
@@ -69,7 +73,7 @@ const AdminDashboard = () => {
       if (!election) return;
 
       // Call backend API to release results
-      const response = await fetch(`http://localhost:5000/api/elections/${electionId}/release-results`, {
+      const response = await fetch(`${API_BASE_URL}/elections/${electionId}/release-results`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

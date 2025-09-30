@@ -4,7 +4,7 @@ import { useVoting } from '../../contexts/VotingContext';
 import { ArrowLeft, Fingerprint, AlertCircle, CheckCircle, User, Smartphone, ShieldAlert, Copy, X } from 'lucide-react';
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://dvotingsoftware.onrender.com/api';
 console.log('🌐 VoterLogin using API URL:', API_BASE_URL);
 
 const VoterLogin = () => {
@@ -47,7 +47,7 @@ const VoterLogin = () => {
     setError('');
     if (aadhaarId.length === 12) {
       try {
-        const response = await fetch('http://localhost:5000/api/voters/request-otp', {
+        const response = await fetch(`${API_BASE_URL}/voters/request-otp`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

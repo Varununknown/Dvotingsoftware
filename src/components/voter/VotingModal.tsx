@@ -4,6 +4,9 @@ import { useWeb3 } from '../../contexts/Web3Context';
 import { X, Camera, CheckCircle, Fingerprint, Hash, RefreshCw, FileText, AlertTriangle, AlertCircle, Wallet, Link } from 'lucide-react';
 import { downloadVoteReceipt } from '../../utils/voteReceipt';
 
+// API Configuration
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://dvotingsoftware.onrender.com/api';
+
 interface VotingModalProps {
   electionId: string;
   onClose: () => void;
@@ -308,7 +311,7 @@ const VotingModal: React.FC<VotingModalProps> = ({ electionId, onClose }) => {
         }
         
         // Call the new voter/:id/vote endpoint
-        const response = await fetch(`http://localhost:5000/api/voters/${currentUser.id}/vote`, {
+        const response = await fetch(`${API_BASE_URL}/voters/${currentUser.id}/vote`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

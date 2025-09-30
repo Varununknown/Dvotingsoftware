@@ -22,7 +22,7 @@ class SyncService {
   
   // Configuration
   private readonly POLL_INTERVAL = 3000; // 3 seconds
-  private readonly API_BASE = 'http://localhost:5000/api';
+  private readonly API_BASE = 'https://dvotingsoftware.onrender.com/api';
 
   /**
    * Initialize sync service with callbacks for state updates
