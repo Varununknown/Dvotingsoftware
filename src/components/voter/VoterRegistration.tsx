@@ -65,7 +65,16 @@ const VoterRegistration = () => {
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [notificationType, setNotificationType] = useState<'success' | 'error' | 'info'>('info');
+  const [isResend, setIsResend] = useState(false);
   // Removed usingWebAuthn state as we're only using simulated scan
+  
+  // Helper function to show OTP notification
+  const showOtpNotification = (otpValue: string, resend = false) => {
+    setNotificationMessage(resend ? `Your new OTP is: ${otpValue}` : `Your OTP is: ${otpValue}`);
+    setNotificationType('info');
+    setShowNotification(true);
+    setIsResend(resend);
+  };
   
   // Check biometric capabilities when component loads
   useEffect(() => {
@@ -127,9 +136,7 @@ const VoterRegistration = () => {
         const data = await response.json();
         if (response.ok) {
           // Display OTP notification first, then proceed to next step
-          setNotificationMessage(`Your OTP is: ${data.otp}`);
-          setNotificationType('success');
-          setShowNotification(true);
+          showOtpNotification(data.otp, false);
           
           // Auto-dismiss after a short delay and proceed
           setTimeout(() => {
@@ -689,6 +696,38 @@ const VoterRegistration = () => {
                 >
                   Verify OTP
                 </button>
+                
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const response = await fetch(`${API_BASE_URL}/voters/request-otp`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ aadhaarId }),
+                      });
+                      const data = await response.json();
+                      if (response.ok) {
+                        showOtpNotification(data.otp, true);
+                        setOtp(''); // Clear current OTP input
+                      } else {
+                        setNotificationMessage(data.message || 'Failed to request new OTP.');
+                        setNotificationType('error');
+                        setShowNotification(true);
+                      }
+                    } catch (err) {
+                      console.error('OTP request error:', err);
+                      setNotificationMessage('Failed to connect to the server. Please try again.');
+                      setNotificationType('error');
+                      setShowNotification(true);
+                    }
+                  }}
+                  className="w-full mt-4 bg-transparent text-green-600 py-2 px-6 rounded-xl font-medium hover:underline transition-colors duration-200"
+                >
+                  Resend OTP
+                </button>
               </form>
             </div>
           )}
@@ -877,7 +916,7 @@ const VoterRegistration = () => {
                       <Info className="h-6 w-6 mr-3 flex-shrink-0" />
                     )}
                     <h3 className="text-xl font-bold">
-                      {notificationMessage.includes('OTP is:') ? 'OTP Code' :
+                      {notificationMessage.includes('OTP is:') ? (isResend ? 'New OTP Code' : 'OTP Code') :
                        notificationType === 'success' ? 'Success' : 
                        notificationType === 'error' ? 'Error' : 'Information'}
                     </h3>
