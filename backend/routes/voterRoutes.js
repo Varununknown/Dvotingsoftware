@@ -365,4 +365,41 @@ router.delete("/admin/:voterId", async (req, res) => {
   }
 });
 
+// 👉 ADMIN ONLY: Remove ALL voters (DANGER: Irreversible action)
+router.delete("/admin/remove-all", async (req, res) => {
+  try {
+    console.log('🚨 ADMIN ACTION: Remove all voters requested');
+    
+    // Get count before deletion for confirmation
+    const totalCount = await Voter.countDocuments();
+    
+    if (totalCount === 0) {
+      return res.json({ 
+        message: "No voters to delete", 
+        deletedCount: 0 
+      });
+    }
+
+    console.log(`🚨 About to delete ${totalCount} voters...`);
+    
+    // Delete all voters
+    const result = await Voter.deleteMany({});
+    
+    console.log(`✅ Successfully deleted ${result.deletedCount} voters`);
+    
+    res.json({ 
+      message: `All users removed successfully! Deleted ${result.deletedCount} voters.`, 
+      deletedCount: result.deletedCount,
+      previousTotal: totalCount
+    });
+    
+  } catch (err) {
+    console.error('❌ Error deleting all voters:', err);
+    res.status(500).json({ 
+      error: "Failed to remove all users", 
+      details: err.message 
+    });
+  }
+});
+
 module.exports = router;

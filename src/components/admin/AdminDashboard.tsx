@@ -249,6 +249,67 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleRemoveAllUsers = async () => {
+    // First confirmation
+    const firstConfirm = window.confirm(
+      `🚨 EXTREME DANGER: Remove ALL Users?\n\n` +
+      `This will PERMANENTLY DELETE ALL ${voterStats.totalVoters} registered voters!\n\n` +
+      `⚠️ WARNING: This action is IRREVERSIBLE!\n\n` +
+      `Are you sure you want to continue?`
+    );
+
+    if (!firstConfirm) return;
+
+    // Second confirmation (double safety check)
+    const secondConfirm = window.confirm(
+      `🔥 FINAL WARNING: Delete ALL Users?\n\n` +
+      `You are about to permanently delete:\n` +
+      `• ${voterStats.totalVoters} total users\n` +
+      `• ${voterStats.verifiedVoters} verified users\n` +
+      `• All voting history and records\n` +
+      `• All biometric credentials\n\n` +
+      `This will reset the entire voter database!\n\n` +
+      `Type 'DELETE ALL' to confirm, or cancel to abort.`
+    );
+
+    if (!secondConfirm) return;
+
+    // Third confirmation with text input
+    const finalConfirm = prompt(
+      `🚨 LAST CHANCE: Type 'DELETE ALL USERS' to confirm:\n\n` +
+      `This is your final opportunity to cancel this destructive action.\n\n` +
+      `Type exactly: DELETE ALL USERS`
+    );
+
+    if (finalConfirm !== 'DELETE ALL USERS') {
+      alert('❌ Action cancelled. Users were NOT deleted.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/voters/admin/remove-all`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Refresh the voter list
+        await fetchAllVoters();
+        alert(`✅ All users removed successfully!\n\nDeleted: ${result.deletedCount} users`);
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('Failed to remove all users:', errorData);
+        alert(`❌ Failed to remove all users: ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error('Error removing all users:', error);
+      alert('❌ Error removing all users. Please try again.');
+    }
+  };
+
   // Load voters when switching to users tab
   React.useEffect(() => {
     if (activeTab === 'users') {
@@ -747,14 +808,28 @@ const AdminDashboard = () => {
             <div>
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-3xl font-bold text-slate-800">User Management</h2>
-                <button
-                  onClick={fetchAllVoters}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2"
-                  disabled={loadingUsers}
-                >
-                  <Shield className="h-4 w-4" />
-                  <span>{loadingUsers ? 'Loading...' : 'Refresh'}</span>
-                </button>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={fetchAllVoters}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2"
+                    disabled={loadingUsers}
+                  >
+                    <Shield className="h-4 w-4" />
+                    <span>{loadingUsers ? 'Loading...' : 'Refresh'}</span>
+                  </button>
+                  
+                  {voterStats.totalVoters > 0 && (
+                    <button
+                      onClick={handleRemoveAllUsers}
+                      className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200 flex items-center space-x-2 border-2 border-red-700"
+                      disabled={loadingUsers}
+                      title="Remove all users - DANGER: Irreversible action!"
+                    >
+                      <UserX className="h-4 w-4" />
+                      <span>Remove All Users</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* User Statistics */}
