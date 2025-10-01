@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useWeb3 } from '../contexts/Web3Context';
 import MobileWalletModal from './MobileWalletModal';
-import { Smartphone, Monitor } from 'lucide-react';
 import { detectDevice, getRecommendedConnectionMessage, type DeviceInfo } from '../utils/deviceDetection';
 
 interface WalletConnectionProps {
@@ -25,11 +24,18 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({ className = 
   }, []);
 
   const handleConnect = async () => {
-    const success = await connectWallet();
-    if (success) {
-      console.log('🎉 Wallet connected successfully!');
+    // Smart wallet connection based on device detection
+    if (deviceInfo?.isMobile && !deviceInfo?.hasMetaMask) {
+      // Mobile device without MetaMask - use WalletConnect
+      handleMobileWalletConnect();
     } else {
-      console.error('❌ Failed to connect wallet');
+      // Desktop or mobile with MetaMask - use browser wallet
+      const success = await connectWallet();
+      if (success) {
+        console.log('🎉 Wallet connected successfully!');
+      } else {
+        console.error('❌ Failed to connect wallet');
+      }
     }
   };
 
@@ -85,53 +91,17 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({ className = 
           <div className="flex-1">
             <h3 className="font-medium text-yellow-800">Mock Blockchain Mode</h3>
             <p className="text-sm text-yellow-600">
-              {deviceInfo ? getRecommendedConnectionMessage() : 'Choose your wallet connection method'}
+              {deviceInfo ? getRecommendedConnectionMessage() : 'Connect your wallet to use REAL blockchain'}
             </p>
           </div>
           <div className="flex space-x-2">
-            {/* Show browser wallet if not mobile or if MetaMask is available */}
-            {(!deviceInfo?.isMobile || deviceInfo?.hasMetaMask) && (
-              <button
-                onClick={handleConnect}
-                disabled={isConnecting}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 text-sm flex items-center space-x-1"
-              >
-                <Monitor size={16} />
-                <span>{isConnecting ? 'Connecting...' : 'Browser'}</span>
-              </button>
-            )}
-            
-            {/* Show mobile wallet if mobile or as alternative on desktop */}
-            {(deviceInfo?.isMobile || deviceInfo?.recommendedConnection === 'both') && (
-              <button
-                onClick={handleMobileWalletConnect}
-                disabled={isMobileConnecting}
-                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 text-sm flex items-center space-x-1"
-              >
-                <Smartphone size={16} />
-                <span>{isMobileConnecting ? 'QR Code...' : 'Mobile'}</span>
-              </button>
-            )}
-            
-            {/* If no device info yet, show both options */}
-            {!deviceInfo && (
-              <>
-                <button
-                  onClick={handleConnect}
-                  disabled={isConnecting}
-                  className="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 text-xs"
-                >
-                  Browser
-                </button>
-                <button
-                  onClick={handleMobileWalletConnect}
-                  disabled={isMobileConnecting}
-                  className="px-3 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 text-xs"
-                >
-                  Mobile
-                </button>
-              </>
-            )}
+            <button
+              onClick={handleConnect}
+              disabled={isConnecting || isMobileConnecting}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 text-sm"
+            >
+              {(isConnecting || isMobileConnecting) ? 'Connecting...' : 'Connect Wallet'}
+            </button>
           </div>
         </div>
       </div>
@@ -164,18 +134,6 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({ className = 
           >
             Check Status
           </button>
-          
-          {/* Show mobile option if appropriate for device */}
-          {(deviceInfo?.isMobile || deviceInfo?.recommendedConnection === 'both') && (
-            <button
-              onClick={handleMobileWalletConnect}
-              disabled={isMobileConnecting}
-              className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200 flex items-center space-x-1"
-            >
-              <Smartphone size={14} />
-              <span>{isMobileConnecting ? 'QR...' : 'Add Mobile'}</span>
-            </button>
-          )}
           
           <a
             href={`https://sepolia.etherscan.io/address/${walletInfo?.address}`}
