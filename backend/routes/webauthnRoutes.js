@@ -26,11 +26,14 @@ const getWebAuthnConfig = () => {
       ]
     };
   } else {
-    // Production/hosted configuration
+    // Production/hosted configuration - support multiple frontend domains
     console.log('🌐 Using PRODUCTION WebAuthn configuration for hosting');
     return {
-      rpID: "dvotingsoftware.onrender.com", // Your hosted domain
-      validOrigins: ["https://dvotingsoftware.onrender.com"] // HTTPS for hosted
+      rpID: "securevoting.vercel.app", // Primary frontend domain
+      validOrigins: [
+        "https://securevoting.vercel.app",
+        "https://dvotingsoftware.onrender.com"
+      ]
     };
   }
 };
