@@ -369,11 +369,15 @@ router.delete("/admin/:voterId", async (req, res) => {
 router.delete("/admin/remove-all", async (req, res) => {
   try {
     console.log('🚨 ADMIN ACTION: Remove all voters requested');
+    console.log('🔍 Request headers:', req.headers);
+    console.log('🔍 Request method:', req.method);
     
     // Get count before deletion for confirmation
     const totalCount = await Voter.countDocuments();
+    console.log(`📊 Current voter count: ${totalCount}`);
     
     if (totalCount === 0) {
+      console.log('ℹ️ No voters found to delete');
       return res.json({ 
         message: "No voters to delete", 
         deletedCount: 0 
@@ -384,6 +388,7 @@ router.delete("/admin/remove-all", async (req, res) => {
     
     // Delete all voters
     const result = await Voter.deleteMany({});
+    console.log('🔍 Delete result:', result);
     
     console.log(`✅ Successfully deleted ${result.deletedCount} voters`);
     
@@ -395,9 +400,15 @@ router.delete("/admin/remove-all", async (req, res) => {
     
   } catch (err) {
     console.error('❌ Error deleting all voters:', err);
+    console.error('❌ Error details:', {
+      name: err.name,
+      message: err.message,
+      stack: err.stack
+    });
     res.status(500).json({ 
-      error: "Failed to remove all users", 
-      details: err.message 
+      error: err.message || "Failed to remove all users", 
+      details: err.stack,
+      type: err.name
     });
   }
 });

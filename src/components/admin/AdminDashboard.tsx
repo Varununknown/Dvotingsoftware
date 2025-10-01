@@ -287,26 +287,35 @@ const AdminDashboard = () => {
     }
 
     try {
+      console.log('🚨 Attempting to delete all users...');
+      console.log('🔍 API URL:', `${API_BASE_URL}/voters/admin/remove-all`);
+      
       const response = await fetch(`${API_BASE_URL}/voters/admin/remove-all`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
       });
+      
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response ok:', response.ok);
 
       if (response.ok) {
         const result = await response.json();
+        console.log('✅ Success result:', result);
         // Refresh the voter list
         await fetchAllVoters();
         alert(`✅ All users removed successfully!\n\nDeleted: ${result.deletedCount} users`);
       } else {
-        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-        console.error('Failed to remove all users:', errorData);
-        alert(`❌ Failed to remove all users: ${errorData.message}`);
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('❌ Error response:', errorData);
+        console.error('❌ Response status:', response.status);
+        console.error('❌ Response statusText:', response.statusText);
+        alert(`❌ Failed to remove all users: ${errorData.error || errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error removing all users:', error);
-      alert('❌ Error removing all users. Please try again.');
+      console.error('❌ Network/fetch error:', error);
+      alert(`❌ Error removing all users: ${error.message || 'Network error'}`);
     }
   };
 
