@@ -295,6 +295,8 @@ class SmartBiometricService {
    */
   private async performRealWebAuthnAuth(aadhaarId: string): Promise<BiometricAuthResult> {
     try {
+      console.log('🔐 Starting real WebAuthn authentication for:', aadhaarId);
+      
       // Step 1: Get authentication options
       const optionsResponse = await fetch(apiConfig.getURL('/webauthn/login/options'), {
         method: 'POST',
@@ -302,11 +304,34 @@ class SmartBiometricService {
         body: JSON.stringify({ aadhaarId })
       });
       
+      console.log('📡 Auth options response:', optionsResponse.status, optionsResponse.statusText);
+      
       if (!optionsResponse.ok) {
-        throw new Error('Failed to get authentication options');
+        const errorData = await optionsResponse.json().catch(() => ({ message: 'Unknown server error' }));
+        console.error('❌ Failed to get authentication options:', errorData);
+        
+        // Check if it's a "no credentials" error
+        if (errorData.message?.includes('No credentials registered')) {
+          console.log('🔄 No credentials found - user needs to register first');
+          throw new Error('No biometric credentials found. Please register first.');
+        }
+        
+        throw new Error(`Server error: ${errorData.message || optionsResponse.statusText}`);
       }
       
       const options = await optionsResponse.json();
+      console.log('📋 Authentication options received:', {
+        challenge: options.challenge ? 'Present' : 'Missing',
+        allowCredentials: options.allowCredentials ? `${options.allowCredentials.length} credentials` : 'None',
+        timeout: options.timeout,
+        userVerification: options.userVerification
+      });
+      
+      // Check if we have credentials to authenticate with
+      if (!options.allowCredentials || options.allowCredentials.length === 0) {
+        console.log('⚠️ No stored credentials found for authentication');
+        throw new Error('No stored biometric credentials found. Please register first.');
+      }
       
       // Step 2: Get credential with real biometrics - mobile optimized
       const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);

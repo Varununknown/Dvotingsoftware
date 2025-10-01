@@ -171,6 +171,12 @@ const VoterLogin = () => {
     
     try {
       console.log('🔐 Starting smart biometric authentication...');
+      console.log('📱 Device info:', {
+        userAgent: navigator.userAgent.substring(0, 100),
+        isMobile: /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),
+        protocol: window.location.protocol,
+        domain: window.location.hostname
+      });
       
       // Use the smart biometric service for real or simulated authentication
       const result = await smartBiometricService.authenticateBiometric(aadhaarId);
@@ -181,6 +187,11 @@ const VoterLogin = () => {
         
         console.log(`✅ Biometric authentication successful using: ${result.method}`);
         console.log(`📋 ${result.message}`);
+        
+        // Special handling for mobile simulation fallback
+        if (result.method === 'simulation' && /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+          console.log('📱 Mobile device used simulation - this is expected if no prior registration');
+        }
         
         // Create user object from result
         const newUser = {
@@ -207,7 +218,14 @@ const VoterLogin = () => {
       }
     } catch (err: any) {
       console.error('❌ Biometric authentication error:', err);
-      setError(err.message || 'Failed to authenticate biometric. Please try again.');
+      
+      // Special handling for mobile credential errors
+      if (err.message?.includes('No credentials') || err.message?.includes('No biometric credentials')) {
+        setError('No biometric credentials found. You may need to register biometric authentication first, or the system will use fallback authentication.');
+      } else {
+        setError(err.message || 'Failed to authenticate biometric. Please try again.');
+      }
+      
       setScanComplete(false);
     } finally {
       setIsScanning(false);

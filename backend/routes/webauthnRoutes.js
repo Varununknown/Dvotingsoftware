@@ -318,7 +318,22 @@ router.post("/login/options", async (req, res) => {
 
     // If no credentials, can't authenticate
     if (!voter.credentials || voter.credentials.length === 0) {
-      return res.status(400).json({ message: "No credentials registered for this voter" });
+      console.log('⚠️ No credentials found for voter:', {
+        aadhaarId,
+        hasCredentialsField: voter.credentials !== undefined,
+        credentialsLength: voter.credentials ? voter.credentials.length : 'undefined',
+        voterData: {
+          id: voter._id,
+          hasCurrentChallenge: !!voter.currentChallenge
+        }
+      });
+      return res.status(400).json({ 
+        message: "No credentials registered for this voter",
+        debug: {
+          hasCredentialsField: voter.credentials !== undefined,
+          credentialsLength: voter.credentials ? voter.credentials.length : 0
+        }
+      });
     }
 
     // Detect if request comes from mobile device
@@ -330,7 +345,11 @@ router.post("/login/options", async (req, res) => {
       isMobile,
       isIOS,
       userAgent: userAgent.substring(0, 100) + '...',
-      credentialsCount: voter.credentials.length
+      credentialsCount: voter.credentials.length,
+      voterDetails: {
+        aadhaarId: voter.aadhaarId,
+        credentialIds: voter.credentials.map(c => c.credentialId ? c.credentialId.substring(0, 10) + '...' : 'missing')
+      }
     });
 
     // Format credentials for WebAuthn
