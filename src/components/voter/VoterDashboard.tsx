@@ -384,9 +384,9 @@ const VoterDashboard = () => {
                             })()}
                             <button
                               onClick={() => setSelectedElection(election.id)}
-                              className="text-blue-600 font-medium text-sm hover:text-blue-800 transition-colors duration-200"
+                              className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2 rounded-xl font-medium hover:from-orange-600 hover:to-orange-700 transition-colors duration-200 text-sm"
                             >
-                              Change Vote
+                              Revote
                             </button>
                           </div>
                         ) : (
