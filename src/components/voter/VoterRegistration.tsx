@@ -710,6 +710,33 @@ const VoterRegistration = () => {
                   <p className="text-blue-700 text-sm mt-1">
                     📱 Your device's fingerprint sensor will activate when you tap "Scan Fingerprint"
                   </p>
+                  <p className="text-blue-600 text-xs mt-1">
+                    🔧 If fingerprint doesn't activate, please ensure your device has biometric security enabled in settings.
+                  </p>
+                </div>
+              )}
+              
+              {/* WebAuthn Support Indicator */}
+              {biometricCapabilities && (
+                <div className={`border rounded-xl p-4 mb-4 ${
+                  biometricCapabilities.recommendRealAuth 
+                    ? 'bg-green-50 border-green-200' 
+                    : 'bg-yellow-50 border-yellow-200'
+                }`}>
+                  <div className="flex items-center text-sm">
+                    <span className={`font-medium ${
+                      biometricCapabilities.recommendRealAuth ? 'text-green-800' : 'text-yellow-800'
+                    }`}>
+                      {biometricCapabilities.recommendRealAuth 
+                        ? '✅ Real biometric authentication available' 
+                        : '⚠️ Using fallback authentication'}
+                    </span>
+                  </div>
+                  {/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
+                    <p className="text-xs mt-1 text-blue-600">
+                      📱 Mobile detected - forcing biometric sensor activation
+                    </p>
+                  )}
                 </div>
               )}
               

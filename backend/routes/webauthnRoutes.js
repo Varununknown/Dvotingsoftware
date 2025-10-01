@@ -76,7 +76,7 @@ router.post("/register/options", async (req, res) => {
       rpID,
       userID: userId,
       userName: voter.aadhaarId, // Using Aadhaar as username
-      timeout: isMobile ? 30000 : 60000, // Shorter timeout for mobile devices
+      timeout: isMobile ? 60000 : 60000, // Keep consistent timeout for mobile
       attestationType: "none",
       authenticatorSelection: {
         authenticatorAttachment: "platform", // Force built-in biometric sensors
@@ -87,6 +87,11 @@ router.post("/register/options", async (req, res) => {
       supportedAlgorithmIDs: [-7, -257], // ES256, RS256 (excluding -8/Ed25519 which can cause problems)
       // Additional mobile optimizations
       excludeCredentials: [], // Don't exclude any existing credentials
+      // Add extensions for mobile devices
+      extensions: isMobile ? {
+        uvm: true, // Request user verification methods
+        credProps: true // Request credential properties
+      } : {}
     };
 
     console.log('🔐 Mobile-optimized WebAuthn registration options:', {
@@ -340,9 +345,14 @@ router.post("/login/options", async (req, res) => {
 
     const options = {
       rpID,
-      timeout: isMobile ? 30000 : 60000, // Shorter timeout for mobile
+      timeout: isMobile ? 60000 : 60000, // Keep consistent timeout
       allowCredentials,
       userVerification: 'required', // Force biometric verification for mobile
+      // Add extensions for mobile devices
+      extensions: isMobile ? {
+        uvm: true,
+        credProps: true
+      } : {}
     };
 
     console.log('🔐 Mobile-optimized authentication options:', {

@@ -67,8 +67,14 @@ class SmartBiometricService {
           // We'll be more optimistic for mobile devices on HTTPS
           if (window.location.protocol === 'https:') {
             hasPlatformAuthenticator = true;
-            console.log('📱 Mobile + HTTPS: Assuming biometric capability available');
+            console.log('📱 Mobile + HTTPS: Forcing biometric capability for mobile');
           }
+        }
+        
+        // Extra aggressive mobile detection - force true for mobile HTTPS
+        if (isMobile && window.location.protocol === 'https:' && !hasPlatformAuthenticator) {
+          hasPlatformAuthenticator = true;
+          console.log('📱 FORCING mobile biometric availability - many mobile browsers underreport capabilities');
         }
         
         console.log('✅ WebAuthn capabilities detected:', {
@@ -200,9 +206,14 @@ class SmartBiometricService {
             residentKey: 'discouraged' // Discourage resident key for mobile
           },
           // Shorter timeout for mobile (mobile users expect quick biometric auth)
-          timeout: isMobile ? 30000 : 60000, // 30s for mobile, 60s for desktop
+          timeout: isMobile ? 60000 : 60000, // Keep same timeout but ensure it's long enough
           // Exclude cross-platform authenticators for mobile to force fingerprint/face
-          excludeCredentials: options.excludeCredentials || []
+          excludeCredentials: options.excludeCredentials || [],
+          // Add extensions for mobile optimization
+          extensions: isMobile ? {
+            uvm: true, // Request user verification methods info
+            credProps: true // Request credential properties
+          } : {}
         }
       };
       
@@ -212,8 +223,13 @@ class SmartBiometricService {
         isAndroid,
         authenticatorAttachment: createOptions.publicKey.authenticatorSelection?.authenticatorAttachment,
         userVerification: createOptions.publicKey.authenticatorSelection?.userVerification,
-        timeout: createOptions.publicKey.timeout
+        timeout: createOptions.publicKey.timeout,
+        hasExtensions: !!createOptions.publicKey.extensions,
+        protocol: window.location.protocol,
+        domain: window.location.hostname
       });
+      
+      console.log('🔥 ATTEMPTING MOBILE WEBAUTHN REGISTRATION - Should trigger fingerprint sensor now...');
       
       const credential = await navigator.credentials.create(createOptions) as PublicKeyCredential;
       
@@ -305,7 +321,12 @@ class SmartBiometricService {
           })),
           // Mobile-specific authentication options
           userVerification: 'required', // Force biometric verification
-          timeout: isMobile ? 30000 : 60000 // Shorter timeout for mobile
+          timeout: isMobile ? 60000 : 60000, // Keep consistent timeout
+          // Add extensions for mobile
+          extensions: isMobile ? {
+            uvm: true,
+            credProps: true
+          } : {}
         }
       };
       
@@ -313,8 +334,13 @@ class SmartBiometricService {
         isMobile,
         userVerification: getOptions.publicKey.userVerification,
         timeout: getOptions.publicKey.timeout,
-        allowCredentialsCount: options.allowCredentials?.length || 0
+        allowCredentialsCount: options.allowCredentials?.length || 0,
+        hasExtensions: !!getOptions.publicKey.extensions,
+        protocol: window.location.protocol,
+        domain: window.location.hostname
       });
+      
+      console.log('🔥 ATTEMPTING MOBILE WEBAUTHN AUTHENTICATION - Should trigger fingerprint sensor now...');
       
       const credential = await navigator.credentials.get(getOptions) as PublicKeyCredential;
       
