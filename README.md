@@ -456,7 +456,7 @@ When reporting issues, please include:
 
 - 🐛 **Bug Reports**: [GitHub Issues](https://github.com/Varununknown/Dvotingsoftware/issues)
 - 💡 **Feature Requests**: [GitHub Discussions](https://github.com/Varununknown/Dvotingsoftware/discussions)
-- 📧 **Direct Contact**: varun@securevote.app
+- 📧 **Direct Contact**: varununknownu@gmail.com
 - 🎓 **Academic Support**: For college projects and educational use
 
 ---
