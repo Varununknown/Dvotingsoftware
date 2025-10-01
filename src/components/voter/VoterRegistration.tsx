@@ -699,6 +699,20 @@ const VoterRegistration = () => {
                 <Fingerprint className="h-8 w-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-slate-800 mb-4">Biometric Registration</h2>
+              
+              {/* Mobile-specific instructions */}
+              {/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                  <div className="flex items-center text-blue-800">
+                    <Smartphone className="h-5 w-5 mr-2" />
+                    <span className="font-medium">Mobile Device Detected</span>
+                  </div>
+                  <p className="text-blue-700 text-sm mt-1">
+                    📱 Your device's fingerprint sensor will activate when you tap "Scan Fingerprint"
+                  </p>
+                </div>
+              )}
+              
               <p className="text-slate-600 mb-6">Scan your fingerprint to complete registration.</p>
               
               {webAuthnSupported && (

@@ -60,20 +60,41 @@ router.post("/register/options", async (req, res) => {
     // User ID must be a Buffer for WebAuthn
     const userId = Buffer.from(voter._id.toString(), 'utf8');
 
+    // Detect if request comes from mobile device
+    const userAgent = req.headers['user-agent'] || '';
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+    
+    console.log('📱 Device detection for WebAuthn:', {
+      isMobile,
+      isIOS,
+      userAgent: userAgent.substring(0, 100) + '...'
+    });
+
     const options = {
       rpName,
       rpID,
       userID: userId,
       userName: voter.aadhaarId, // Using Aadhaar as username
-      timeout: 60000, // 1 minute
+      timeout: isMobile ? 30000 : 60000, // Shorter timeout for mobile devices
       attestationType: "none",
       authenticatorSelection: {
-        authenticatorAttachment: "platform", // prefer built-in sensors
-        userVerification: "discouraged", // Make this less strict for development
-        requireResidentKey: false,
+        authenticatorAttachment: "platform", // Force built-in biometric sensors
+        userVerification: "required", // Require biometric verification (important for mobile)
+        requireResidentKey: false, // Don't require resident key for better mobile compatibility
+        residentKey: "discouraged" // Discourage resident key for mobile performance
       },
       supportedAlgorithmIDs: [-7, -257], // ES256, RS256 (excluding -8/Ed25519 which can cause problems)
+      // Additional mobile optimizations
+      excludeCredentials: [], // Don't exclude any existing credentials
     };
+
+    console.log('🔐 Mobile-optimized WebAuthn registration options:', {
+      timeout: options.timeout,
+      authenticatorAttachment: options.authenticatorSelection.authenticatorAttachment,
+      userVerification: options.authenticatorSelection.userVerification,
+      isMobileOptimized: isMobile
+    });
 
     const registrationOptions = await generateRegistrationOptions(options);
 
@@ -295,20 +316,41 @@ router.post("/login/options", async (req, res) => {
       return res.status(400).json({ message: "No credentials registered for this voter" });
     }
 
+    // Detect if request comes from mobile device
+    const userAgent = req.headers['user-agent'] || '';
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+    
+    console.log('📱 Mobile authentication request:', {
+      isMobile,
+      isIOS,
+      userAgent: userAgent.substring(0, 100) + '...',
+      credentialsCount: voter.credentials.length
+    });
+
     // Format credentials for WebAuthn
     const allowCredentials = voter.credentials
       .filter(cred => cred && cred.credentialId) // Filter out any entries with missing IDs
       .map(cred => ({
         id: Buffer.from(cred.credentialId, 'base64url'),
         type: 'public-key',
+        // Add mobile-specific transport hints
+        transports: isMobile ? ['internal'] : ['internal', 'usb', 'nfc', 'ble']
       }));
 
     const options = {
       rpID,
-      timeout: 60000,
+      timeout: isMobile ? 30000 : 60000, // Shorter timeout for mobile
       allowCredentials,
-      userVerification: 'preferred',
+      userVerification: 'required', // Force biometric verification for mobile
     };
+
+    console.log('🔐 Mobile-optimized authentication options:', {
+      timeout: options.timeout,
+      userVerification: options.userVerification,
+      allowCredentialsCount: allowCredentials.length,
+      isMobileOptimized: isMobile
+    });
 
     const authenticationOptions = await generateAuthenticationOptions(options);
 

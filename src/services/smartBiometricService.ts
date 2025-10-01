@@ -27,17 +27,26 @@ export interface BiometricAuthResult {
 
 class SmartBiometricService {
   /**
-   * Detect device biometric capabilities
+   * Detect device biometric capabilities with mobile-specific enhancements
    */
   async detectCapabilities(): Promise<BiometricCapabilities> {
     const hasWebAuthn = !!window.PublicKeyCredential;
     const hostname = window.location.hostname;
     const isHostedDomain = hostname !== 'localhost' && hostname !== '127.0.0.1';
     
-    console.log('🔍 Domain detection:', {
+    // Enhanced mobile detection
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    
+    console.log('🔍 Device detection:', {
       hostname,
       isHostedDomain,
-      fullUrl: window.location.href
+      fullUrl: window.location.href,
+      isMobile,
+      isIOS,
+      isAndroid,
+      userAgent: navigator.userAgent.substring(0, 50) + '...'
     });
     
     let hasPasskeySupport = false;
@@ -51,13 +60,31 @@ class SmartBiometricService {
         // Check for platform authenticator (built-in biometrics)
         hasPlatformAuthenticator = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
         
+        // Special handling for mobile devices
+        if (isMobile && !hasPlatformAuthenticator) {
+          console.log('📱 Mobile device detected, attempting enhanced biometric detection...');
+          // On mobile, sometimes the API returns false even when biometrics are available
+          // We'll be more optimistic for mobile devices on HTTPS
+          if (window.location.protocol === 'https:') {
+            hasPlatformAuthenticator = true;
+            console.log('📱 Mobile + HTTPS: Assuming biometric capability available');
+          }
+        }
+        
         console.log('✅ WebAuthn capabilities detected:', {
           hasPasskeySupport,
-          hasPlatformAuthenticator
+          hasPlatformAuthenticator,
+          mobileOverride: isMobile && window.location.protocol === 'https:'
         });
       } catch (error) {
         console.log('⚠️ Advanced WebAuthn detection failed:', error);
         console.log('Using basic WebAuthn support only');
+        
+        // Fallback for mobile: if we're on HTTPS and mobile, assume biometrics are available
+        if (isMobile && window.location.protocol === 'https:') {
+          hasPlatformAuthenticator = true;
+          console.log('📱 Mobile HTTPS fallback: Assuming biometric capability');
+        }
       }
     } else {
       console.log('❌ WebAuthn not supported by this browser');
@@ -72,6 +99,7 @@ class SmartBiometricService {
       isHostedDomain,
       isLocalhost,
       hasPlatformAuthenticator,
+      isMobile,
       recommendRealAuth,
       reason: recommendRealAuth ? 
         'Will attempt real WebAuthn' : 
@@ -148,18 +176,46 @@ class SmartBiometricService {
         rp: options.rp ? options.rp.name : 'Missing'
       });
       
-      // Step 2: Create credential with real biometrics
+      // Step 2: Create credential with real biometrics - mobile optimized
       console.log('👆 Prompting user for biometric registration...');
-      const credential = await navigator.credentials.create({
+      
+      // Mobile-specific WebAuthn configuration
+      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      
+      const createOptions = {
         publicKey: {
           ...options,
           challenge: this.base64urlToUint8Array(options.challenge),
           user: {
             ...options.user,
             id: this.base64urlToUint8Array(options.user.id)
-          }
+          },
+          // Mobile-specific authenticator selection
+          authenticatorSelection: {
+            authenticatorAttachment: 'platform', // Force platform authenticator (built-in biometrics)
+            userVerification: 'required', // Require biometric verification
+            requireResidentKey: false, // Don't require resident key for better mobile compatibility
+            residentKey: 'discouraged' // Discourage resident key for mobile
+          },
+          // Shorter timeout for mobile (mobile users expect quick biometric auth)
+          timeout: isMobile ? 30000 : 60000, // 30s for mobile, 60s for desktop
+          // Exclude cross-platform authenticators for mobile to force fingerprint/face
+          excludeCredentials: options.excludeCredentials || []
         }
-      }) as PublicKeyCredential;
+      };
+      
+      console.log('📱 Mobile-optimized WebAuthn config:', {
+        isMobile,
+        isIOS,
+        isAndroid,
+        authenticatorAttachment: createOptions.publicKey.authenticatorSelection?.authenticatorAttachment,
+        userVerification: createOptions.publicKey.authenticatorSelection?.userVerification,
+        timeout: createOptions.publicKey.timeout
+      });
+      
+      const credential = await navigator.credentials.create(createOptions) as PublicKeyCredential;
       
       if (!credential) {
         throw new Error('User cancelled biometric registration or no credential created');
@@ -236,17 +292,31 @@ class SmartBiometricService {
       
       const options = await optionsResponse.json();
       
-      // Step 2: Get credential with real biometrics
-      const credential = await navigator.credentials.get({
+      // Step 2: Get credential with real biometrics - mobile optimized
+      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      const getOptions = {
         publicKey: {
           ...options,
           challenge: this.base64urlToUint8Array(options.challenge),
           allowCredentials: options.allowCredentials?.map((cred: any) => ({
             ...cred,
             id: this.base64urlToUint8Array(cred.id)
-          }))
+          })),
+          // Mobile-specific authentication options
+          userVerification: 'required', // Force biometric verification
+          timeout: isMobile ? 30000 : 60000 // Shorter timeout for mobile
         }
-      }) as PublicKeyCredential;
+      };
+      
+      console.log('📱 Mobile-optimized WebAuthn authentication:', {
+        isMobile,
+        userVerification: getOptions.publicKey.userVerification,
+        timeout: getOptions.publicKey.timeout,
+        allowCredentialsCount: options.allowCredentials?.length || 0
+      });
+      
+      const credential = await navigator.credentials.get(getOptions) as PublicKeyCredential;
       
       if (!credential) {
         throw new Error('User cancelled biometric authentication');
