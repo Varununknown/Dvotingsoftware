@@ -330,7 +330,15 @@ class SmartBiometricService {
       // Check if we have credentials to authenticate with
       if (!options.allowCredentials || options.allowCredentials.length === 0) {
         console.log('⚠️ No stored credentials found for authentication');
-        throw new Error('No stored biometric credentials found. Please register first.');
+        
+        // For mobile devices, still attempt WebAuthn to trigger fingerprint sensor
+        const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+          console.log('📱 Mobile detected - will still attempt WebAuthn to trigger sensor');
+          // Continue with the WebAuthn flow - let it fail naturally after triggering sensor
+        } else {
+          throw new Error('No stored biometric credentials found. Please register first.');
+        }
       }
       
       // Step 2: Get credential with real biometrics - mobile optimized
@@ -340,10 +348,12 @@ class SmartBiometricService {
         publicKey: {
           ...options,
           challenge: this.base64urlToUint8Array(options.challenge),
-          allowCredentials: options.allowCredentials?.map((cred: any) => ({
-            ...cred,
-            id: this.base64urlToUint8Array(cred.id)
-          })),
+          allowCredentials: options.allowCredentials && options.allowCredentials.length > 0 
+            ? options.allowCredentials.map((cred: any) => ({
+                ...cred,
+                id: this.base64urlToUint8Array(cred.id)
+              }))
+            : undefined, // If no credentials, omit allowCredentials to trigger discoverable credential flow
           // Mobile-specific authentication options
           userVerification: 'required', // Force biometric verification
           timeout: isMobile ? 60000 : 60000, // Keep consistent timeout
@@ -409,6 +419,13 @@ class SmartBiometricService {
       
     } catch (error: any) {
       console.error('Real WebAuthn authentication failed:', error);
+      
+      // Special handling for mobile devices - provide more context
+      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      if (isMobile) {
+        console.log('📱 Mobile WebAuthn failed - this may be expected if no credentials were registered');
+        console.log('📱 Mobile fingerprint sensor should have been triggered during the attempt');
+      }
       
       // Graceful fallback to simulation
       console.log('⚡ Falling back to simulation due to real WebAuthn failure');
