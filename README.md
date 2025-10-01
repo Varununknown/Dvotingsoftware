@@ -680,7 +680,7 @@ We welcome contributions! Please follow our contribution guidelines:
 ## 📞 Support & Contact
 
 ### 🆘 **Need Help?**
-- 📧 **Email**: varun@securevote.app
+- 📧 **Email**: varununknownu@gmail.com
 - 🐛 **Issues**: [GitHub Issues](https://github.com/Varununknown/Dvotingsoftware/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/Varununknown/Dvotingsoftware/discussions)
 
