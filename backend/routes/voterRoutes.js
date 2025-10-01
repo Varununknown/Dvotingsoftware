@@ -336,36 +336,8 @@ router.get("/admin/all", async (req, res) => {
   }
 });
 
-// 👉 ADMIN ONLY: Delete voter by ID
-router.delete("/admin/:voterId", async (req, res) => {
-  try {
-    const { voterId } = req.params;
-    
-    const voter = await Voter.findById(voterId);
-    if (!voter) {
-      return res.status(404).json({ message: "Voter not found" });
-    }
-
-    // Store voter info for response
-    const voterInfo = {
-      aadhaarId: voter.aadhaarId,
-      name: voter.name,
-      wasVerified: voter.isVerified
-    };
-
-    await Voter.findByIdAndDelete(voterId);
-    
-    res.json({ 
-      message: "Voter removed successfully ✅", 
-      removedVoter: voterInfo 
-    });
-  } catch (err) {
-    console.error('Error deleting voter:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // 👉 ADMIN ONLY: Remove ALL voters (DANGER: Irreversible action)
+// NOTE: This route MUST come BEFORE /admin/:voterId to avoid route conflicts
 router.delete("/admin/remove-all", async (req, res) => {
   try {
     console.log('🚨 ADMIN ACTION: Remove all voters requested');
@@ -410,6 +382,36 @@ router.delete("/admin/remove-all", async (req, res) => {
       details: err.stack,
       type: err.name
     });
+  }
+});
+
+// 👉 ADMIN ONLY: Delete voter by ID
+// NOTE: This route MUST come AFTER /admin/remove-all to avoid route conflicts
+router.delete("/admin/:voterId", async (req, res) => {
+  try {
+    const { voterId } = req.params;
+    
+    const voter = await Voter.findById(voterId);
+    if (!voter) {
+      return res.status(404).json({ message: "Voter not found" });
+    }
+
+    // Store voter info for response
+    const voterInfo = {
+      aadhaarId: voter.aadhaarId,
+      name: voter.name,
+      wasVerified: voter.isVerified
+    };
+
+    await Voter.findByIdAndDelete(voterId);
+    
+    res.json({ 
+      message: "Voter removed successfully ✅", 
+      removedVoter: voterInfo 
+    });
+  } catch (err) {
+    console.error('Error deleting voter:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
