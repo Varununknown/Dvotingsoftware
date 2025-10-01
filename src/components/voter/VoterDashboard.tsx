@@ -349,8 +349,8 @@ const VoterDashboard = () => {
                 <div className="grid gap-6">
                   {activeElections.map((election) => (
                     <div key={election.id} className="bg-white/70 backdrop-blur-sm border border-white/20 rounded-3xl p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 space-y-4 sm:space-y-0">
+                        <div className="flex-1">
                           <div className="flex items-center space-x-3 mb-2">
                             <span className="text-2xl">{election.logo}</span>
                             <h3 className="text-xl font-bold text-slate-800">{election.title}</h3>
@@ -365,7 +365,7 @@ const VoterDashboard = () => {
                           </div>
                         </div>
                         {(currentUser.hasVoted?.[election.id] || currentUser.votingHistory?.some(v => v.electionId === election.id)) ? (
-                          <div className="flex flex-col items-end">
+                          <div className="flex flex-col sm:items-end items-center mt-4 sm:mt-0">
                             <div className="flex items-center bg-green-100 text-green-800 px-4 py-2 rounded-full mb-2">
                               <CheckCircle className="h-4 w-4 mr-2" />
                               <span className="font-medium">Voted</span>
@@ -384,15 +384,16 @@ const VoterDashboard = () => {
                             })()}
                             <button
                               onClick={() => setSelectedElection(election.id)}
-                              className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2 rounded-xl font-medium hover:from-orange-600 hover:to-orange-700 transition-colors duration-200 text-sm"
+                              className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2 rounded-xl font-medium hover:from-orange-600 hover:to-orange-700 transition-colors duration-200 text-sm flex items-center space-x-2"
                             >
-                              Revote
+                              <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                              <span>Revote</span>
                             </button>
                           </div>
                         ) : (
                           <button
                             onClick={() => setSelectedElection(election.id)}
-                            className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-2 rounded-xl font-medium hover:from-blue-600 hover:to-blue-700 transition-colors duration-200"
+                            className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-2 rounded-xl font-medium hover:from-blue-600 hover:to-blue-700 transition-colors duration-200 mt-4 sm:mt-0"
                           >
                             Vote Now
                           </button>
