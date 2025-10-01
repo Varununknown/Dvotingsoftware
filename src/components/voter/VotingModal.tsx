@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useVoting } from '../../contexts/VotingContext';
 import { useWeb3 } from '../../contexts/Web3Context';
-import { X, Camera, CheckCircle, Fingerprint, Hash, RefreshCw, FileText, AlertTriangle, AlertCircle, Wallet, Link } from 'lucide-react';
+import { X, Camera, CheckCircle, Fingerprint, Hash, RefreshCw, FileText, AlertTriangle, AlertCircle } from 'lucide-react';
 import { downloadVoteReceipt } from '../../utils/voteReceipt';
+import { faceDetectionService } from '../../services/faceDetectionService';
 
 // API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://dvotingsoftware.onrender.com/api';
@@ -14,7 +15,7 @@ interface VotingModalProps {
 
 const VotingModal: React.FC<VotingModalProps> = ({ electionId, onClose }) => {
     const { currentUser, elections, castVote, refreshUserData } = useVoting();
-    const { walletInfo, isConnecting, isRealBlockchain, connectWallet } = useWeb3();
+    const { walletInfo, isRealBlockchain, connectWallet } = useWeb3();
   const [step, setStep] = useState(1); // 1: candidate selection, 2: wallet connection (if needed), 3: selfie, 4: confirmation, 5: success
   const [selectedCandidate, setSelectedCandidate] = useState<string>('');
   const [isCapturing, setIsCapturing] = useState(false);
@@ -25,6 +26,11 @@ const VotingModal: React.FC<VotingModalProps> = ({ electionId, onClose }) => {
   const [webcamError, setWebcamError] = useState<string | null>(null);
   const [blockchainTxHash, setBlockchainTxHash] = useState<string>('');
   
+  // Face detection state
+  const [isDetectingFaces, setIsDetectingFaces] = useState(false);
+  const [privacyViolation, setPrivacyViolation] = useState<string | null>(null);
+  
+  // Refs for webcam elements
   // Refs for webcam elements
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -163,8 +169,122 @@ const VotingModal: React.FC<VotingModalProps> = ({ electionId, onClose }) => {
     }
   };
 
-  // Capture selfie
-  const handleSelfieCapture = () => {
+  // Capture selfie with face detection privacy check
+  const handleSelfieCapture = async () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    
+    setIsCapturing(true);
+    setIsDetectingFaces(true);
+    setPrivacyViolation(null);
+    
+    try {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      
+      // Set canvas dimensions to match video
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      // Draw video frame to canvas
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Could not get canvas context');
+      }
+      
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Initialize face detection if not already done
+      if (!faceDetectionService.isReady()) {
+        console.log('Initializing face detection...');
+        await faceDetectionService.initialize();
+      }
+      
+      // Perform face detection for privacy validation
+      console.log('Analyzing selfie for privacy compliance...');
+      const faceAnalysis = await faceDetectionService.analyzeCanvas(canvas);
+      
+      if (!faceAnalysis.isPrivacyCompliant) {
+        // Privacy violation detected - multiple people or no faces
+        console.log('Privacy violation detected:', faceAnalysis.errorMessage);
+        setPrivacyViolation(faceAnalysis.errorMessage || 'Privacy violation detected');
+        setIsCapturing(false);
+        setIsDetectingFaces(false);
+        
+        // Show error for a few seconds then allow retry
+        setTimeout(() => {
+          setPrivacyViolation(null);
+        }, 4000);
+        return;
+      }
+      
+      // Privacy compliant - proceed with selfie capture
+      console.log(`Privacy compliant: detected ${faceAnalysis.faceCount} person`);
+      const dataUrl = canvas.toDataURL('image/jpeg');
+      setSelfieImage(dataUrl);
+      
+      // Success!
+      setTimeout(() => {
+        setIsCapturing(false);
+        setIsDetectingFaces(false);
+        setSelfieCaptured(true);
+      }, 500);
+      
+    } catch (error) {
+      console.error('Error during selfie capture or face detection:', error);
+      setIsCapturing(false);
+      setIsDetectingFaces(false);
+      
+      // Check if the error is related to face detection
+      if (error instanceof Error && (
+        error.message.includes('face detection') || 
+        error.message.includes('models') ||
+        error.message.includes('Failed to load')
+      )) {
+        // Face detection failed, but allow fallback to proceed without it
+        console.warn('Face detection failed, proceeding without privacy validation');
+        
+        // Try to capture basic selfie without face detection
+        try {
+          const video = videoRef.current;
+          const canvas = canvasRef.current;
+          if (video && canvas) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+              const dataUrl = canvas.toDataURL('image/jpeg');
+              setSelfieImage(dataUrl);
+            }
+          }
+        } catch (basicCaptureError) {
+          console.error('Basic capture also failed:', basicCaptureError);
+        }
+        
+        setPrivacyViolation('⚠️ Face detection unavailable - proceeding without privacy validation');
+        
+        // Auto-clear the warning and proceed
+        setTimeout(() => {
+          setPrivacyViolation(null);
+          setSelfieCaptured(true);
+        }, 2000);
+      } else {
+        setWebcamError('Failed to capture image. Please try again.');
+      }
+    }
+  };
+  
+  // Retry webcam capture
+  const handleRetryCapture = () => {
+    setSelfieImage(null);
+    setSelfieCaptured(false);
+    setWebcamError(null);
+    setPrivacyViolation(null);
+    initializeWebcam();
+  };
+
+  // Emergency fallback: capture selfie without face detection
+  const handleBasicSelfieCapture = () => {
     if (!videoRef.current || !canvasRef.current) return;
     
     setIsCapturing(true);
@@ -179,32 +299,27 @@ const VotingModal: React.FC<VotingModalProps> = ({ electionId, onClose }) => {
       
       // Draw video frame to canvas
       const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        // Convert canvas to data URL
-        const dataUrl = canvas.toDataURL('image/jpeg');
-        setSelfieImage(dataUrl);
-        
-        // Success!
-        setTimeout(() => {
-          setIsCapturing(false);
-          setSelfieCaptured(true);
-        }, 500);
+      if (!ctx) {
+        throw new Error('Could not get canvas context');
       }
+      
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg');
+      setSelfieImage(dataUrl);
+      
+      // Success!
+      setTimeout(() => {
+        setIsCapturing(false);
+        setSelfieCaptured(true);
+        setPrivacyViolation(null);
+        setWebcamError(null);
+      }, 500);
+      
     } catch (error) {
-      console.error('Error capturing image:', error);
+      console.error('Error capturing basic selfie:', error);
       setIsCapturing(false);
       setWebcamError('Failed to capture image. Please try again.');
     }
-  };
-  
-  // Retry webcam capture
-  const handleRetryCapture = () => {
-    setSelfieImage(null);
-    setSelfieCaptured(false);
-    setWebcamError(null);
-    initializeWebcam();
   };
 
   // More realistic blockchain hash generation
@@ -305,7 +420,7 @@ const VotingModal: React.FC<VotingModalProps> = ({ electionId, onClose }) => {
         
         // Determine if this is truly a vote change
         const isActuallyChangingVote = isRevoting && previousVote && previousVote !== selectedCandidate;
-        setIsVoteChanged(isActuallyChangingVote);
+        setIsVoteChanged(Boolean(isActuallyChangingVote));
         
         console.log(`Vote change status: ${isActuallyChangingVote ? 'CHANGING VOTE' : 'NEW VOTE OR SAME VOTE'}`);
         
@@ -500,6 +615,32 @@ const VotingModal: React.FC<VotingModalProps> = ({ electionId, onClose }) => {
               </div>
             )}
 
+            {privacyViolation && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                <div className="flex items-start">
+                  <AlertTriangle className="h-5 w-5 text-red-500 mr-2 mt-0.5 flex-shrink-0" />
+                  <div className="text-left">
+                    <h5 className="font-semibold text-red-700">Privacy Violation Detected</h5>
+                    <p className="text-sm text-red-600 mt-1">{privacyViolation}</p>
+                    {!privacyViolation.includes('proceeding without') && (
+                      <p className="text-xs text-red-500 mt-2">
+                        Only one person should be visible in the selfie to maintain vote privacy.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {isDetectingFaces && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                <div className="flex items-center">
+                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent animate-spin mr-3"></div>
+                  <p className="text-blue-700 text-sm">Analyzing image for privacy compliance...</p>
+                </div>
+              </div>
+            )}
+
             <div className="relative mb-6 overflow-hidden">
               {!selfieCaptured ? (
                 <div className="webcam-container mx-auto relative">
@@ -539,20 +680,32 @@ const VotingModal: React.FC<VotingModalProps> = ({ electionId, onClose }) => {
             
             {!selfieCaptured ? (
               <>
-                {!isCapturing && (
+                {!isCapturing && !isDetectingFaces && (
                   <button
                     onClick={handleSelfieCapture}
                     className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-6 rounded-xl font-semibold hover:from-green-600 hover:to-green-700 transition-colors duration-200 mb-4"
-                    disabled={webcamError !== null}
+                    disabled={webcamError !== null || privacyViolation !== null}
                   >
                     <Camera className="h-5 w-5 inline mr-2" />
                     Capture Selfie
                   </button>
                 )}
+
+                {/* Emergency fallback button for face detection issues */}
+                {!isCapturing && !isDetectingFaces && !selfieCaptured && webcamError && (
+                  <button
+                    onClick={handleBasicSelfieCapture}
+                    className="w-full bg-yellow-500 text-white py-2 px-6 rounded-xl font-medium hover:bg-yellow-600 transition-colors duration-200 mb-4"
+                  >
+                    Skip Face Detection & Capture
+                  </button>
+                )}
                 
-                {isCapturing && (
+                {(isCapturing || isDetectingFaces) && (
                   <p className="text-blue-600 font-medium mb-4">
-                    <span className="inline-block animate-pulse">Capturing image...</span>
+                    <span className="inline-block animate-pulse">
+                      {isDetectingFaces ? 'Analyzing image...' : 'Capturing image...'}
+                    </span>
                   </p>
                 )}
               </>
