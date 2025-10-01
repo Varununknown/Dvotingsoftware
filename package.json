@@ -18,6 +18,9 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
+    "@walletconnect/sign-client": "^2.21.10",
+    "@walletconnect/types": "^2.21.10",
+    "@walletconnect/utils": "^2.21.10",
     "ethers": "^6.15.0",
     "face-api.js": "^0.22.2",
     "lucide-react": "^0.344.0",
