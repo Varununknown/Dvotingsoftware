@@ -458,7 +458,13 @@ const VoterRegistration = () => {
   */
 
   const handleFingerprintScan = async () => {
-    // Smart domain detection: Use real WebAuthn on hosted domain, simulation on localhost
+    // For now, always use simulation until we properly test real WebAuthn
+    // Real WebAuthn requires proper setup and testing on hosted environment
+    console.log('🔧 Using reliable simulated fingerprint scan for consistent experience');
+    handleSimulatedScan();
+    
+    // TODO: Enable real WebAuthn after proper testing and credential management
+    /*
     const isHostedDomain = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
     
     if (isHostedDomain && webAuthnSupported) {
@@ -468,8 +474,12 @@ const VoterRegistration = () => {
       console.log('🔧 Using simulated fingerprint scan for localhost/unsupported browsers');
       handleSimulatedScan();
     }
+    */
   };
 
+  // Real WebAuthn implementation - currently disabled for testing
+  // TODO: Re-enable after proper credential registration flow is implemented
+  /*
   const handleRealWebAuthnScan = async () => {
     setIsScanning(true);
     setError('');
@@ -545,6 +555,7 @@ const VoterRegistration = () => {
       setIsScanning(false);
     }
   };
+  */
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 py-4 sm:py-8">
