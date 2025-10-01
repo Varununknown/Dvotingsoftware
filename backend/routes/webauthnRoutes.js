@@ -5,11 +5,30 @@ const router = express.Router();
 
 // Configuration for WebAuthn
 const rpName = "SecureVote";
-const rpID = "localhost"; // In production, this would be your domain without protocol
-// Support multiple origins to handle dev server port changes
-const validOrigins = ["http://localhost:5173", "http://localhost:5174"]; // In production, this would be your full origin
-// Default origin for logging (we'll still verify against all validOrigins)
-const origin = validOrigins[0];
+
+// Smart domain detection for hosted vs localhost
+const getWebAuthnConfig = () => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  if (isProduction) {
+    // Production/hosted configuration
+    return {
+      rpID: "dvotingsoftware.onrender.com", // Your hosted domain
+      validOrigins: ["https://dvotingsoftware.onrender.com"] // HTTPS for hosted
+    };
+  } else {
+    // Development configuration  
+    return {
+      rpID: "localhost", // Localhost for development
+      validOrigins: ["http://localhost:5173", "http://localhost:5174", "https://localhost:5173", "https://localhost:5174"] // Support both HTTP and HTTPS for dev
+    };
+  }
+};
+
+const { rpID, validOrigins } = getWebAuthnConfig();
+const origin = validOrigins[0]; // Default origin for logging
+
+console.log(`🔐 WebAuthn configured for: ${rpID} with origins:`, validOrigins);
 
 // Generate registration options
 router.post("/register/options", async (req, res) => {

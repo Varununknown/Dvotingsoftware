@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Smartphone, Fingerprint, AlertCircle, CheckCircle, ShieldAlert, Shield, Info, X, Copy } from 'lucide-react';
+import { ArrowLeft, User, Smartphone, Fingerprint, AlertCircle, CheckCircle, ShieldAlert, Info, X, Copy } from 'lucide-react';
 import { useVoting } from '../../contexts/VotingContext';
 
 // API Configuration  
@@ -458,15 +458,91 @@ const VoterRegistration = () => {
   */
 
   const handleFingerprintScan = async () => {
-    // Always use simulated scan for reliable operation
-    handleSimulatedScan();
+    // Smart domain detection: Use real WebAuthn on hosted domain, simulation on localhost
+    const isHostedDomain = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
     
-    // Keep webAuthnSupported state for UI display purposes
-    // but don't actually use WebAuthn functionality
-    if (!webAuthnSupported) {
-      console.log('WebAuthn not supported by this browser - using simulated scan');
+    if (isHostedDomain && webAuthnSupported) {
+      console.log('🔐 Using real WebAuthn fingerprint registration on hosted domain');
+      await handleRealWebAuthnScan();
     } else {
-      console.log('Using simulated fingerprint scan for consistent experience');
+      console.log('🔧 Using simulated fingerprint scan for localhost/unsupported browsers');
+      handleSimulatedScan();
+    }
+  };
+
+  const handleRealWebAuthnScan = async () => {
+    setIsScanning(true);
+    setError('');
+    
+    try {
+      // Step 1: Get registration options from server
+      const optionsResponse = await fetch(`${API_BASE_URL}/webauthn/register/options`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aadhaarId })
+      });
+      
+      if (!optionsResponse.ok) {
+        throw new Error('Failed to get registration options');
+      }
+      
+      const options = await optionsResponse.json();
+      
+      // Step 2: Start WebAuthn registration
+      const credential = await navigator.credentials.create({
+        publicKey: {
+          ...options,
+          challenge: new Uint8Array(Buffer.from(options.challenge, 'base64url')),
+          user: {
+            ...options.user,
+            id: new Uint8Array(Buffer.from(options.user.id, 'base64url'))
+          }
+        }
+      }) as PublicKeyCredential;
+      
+      if (!credential) {
+        throw new Error('Registration cancelled');
+      }
+      
+      // Step 3: Verify registration with server
+      const verifyResponse = await fetch(`${API_BASE_URL}/webauthn/register/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          aadhaarId,
+          attestationResponse: {
+            id: credential.id,
+            rawId: Buffer.from(credential.rawId).toString('base64url'),
+            type: credential.type,
+            response: {
+              attestationObject: Buffer.from((credential.response as AuthenticatorAttestationResponse).attestationObject).toString('base64url'),
+              clientDataJSON: Buffer.from((credential.response as AuthenticatorAttestationResponse).clientDataJSON).toString('base64url')
+            }
+          }
+        })
+      });
+      
+      const result = await verifyResponse.json();
+      
+      if (verifyResponse.ok && result.verified) {
+        setScanComplete(true);
+        console.log('✅ Real WebAuthn registration successful!');
+        setTimeout(() => setStep(4), 1000);
+      } else {
+        throw new Error(result.message || 'WebAuthn registration failed');
+      }
+      
+    } catch (err: any) {
+      console.error('Real WebAuthn failed, falling back to simulation:', err);
+      setError(`Real fingerprint failed: ${err.message}. Trying simulation...`);
+      
+      // Fallback to simulation if real WebAuthn fails
+      setTimeout(() => {
+        setError('');
+        handleSimulatedScan();
+      }, 1500);
+    } finally {
+      setIsScanning(false);
     }
   };
 

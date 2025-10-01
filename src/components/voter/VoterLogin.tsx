@@ -153,15 +153,110 @@ const VoterLogin = () => {
   };
 
   const handleFingerprintScan = async () => {
-    // Always use simulated scan for reliable operation
-    handleSimulatedScan();
+    // Smart domain detection: Use real WebAuthn on hosted domain, simulation on localhost
+    const isHostedDomain = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
     
-    // Keep webAuthnSupported state for UI display purposes
-    // but don't actually use WebAuthn functionality
-    if (!webAuthnSupported) {
-      console.log('WebAuthn not supported by this browser - using simulated scan');
+    if (isHostedDomain && webAuthnSupported) {
+      console.log('🔐 Using real WebAuthn fingerprint authentication on hosted domain');
+      await handleRealWebAuthnScan();
     } else {
-      console.log('Using simulated fingerprint scan for consistent experience');
+      console.log('🔧 Using simulated fingerprint scan for localhost/unsupported browsers');
+      handleSimulatedScan();
+    }
+  };
+
+  const handleRealWebAuthnScan = async () => {
+    setIsScanning(true);
+    setError('');
+    
+    try {
+      // Step 1: Get authentication options from server
+      const optionsResponse = await fetch(`${API_BASE_URL}/webauthn/login/options`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aadhaarId })
+      });
+      
+      if (!optionsResponse.ok) {
+        throw new Error('Failed to get authentication options');
+      }
+      
+      const options = await optionsResponse.json();
+      
+      // Step 2: Start WebAuthn authentication
+      const credential = await navigator.credentials.get({
+        publicKey: {
+          ...options,
+          challenge: new Uint8Array(Buffer.from(options.challenge, 'base64url')),
+          allowCredentials: options.allowCredentials?.map((cred: any) => ({
+            ...cred,
+            id: new Uint8Array(Buffer.from(cred.id, 'base64url'))
+          }))
+        }
+      }) as PublicKeyCredential;
+      
+      if (!credential) {
+        throw new Error('Authentication cancelled');
+      }
+      
+      // Step 3: Verify authentication with server
+      const verifyResponse = await fetch(`${API_BASE_URL}/webauthn/login/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          aadhaarId,
+          assertionResponse: {
+            id: credential.id,
+            rawId: Buffer.from(credential.rawId).toString('base64url'),
+            type: credential.type,
+            response: {
+              authenticatorData: Buffer.from((credential.response as AuthenticatorAssertionResponse).authenticatorData).toString('base64url'),
+              clientDataJSON: Buffer.from((credential.response as AuthenticatorAssertionResponse).clientDataJSON).toString('base64url'),
+              signature: Buffer.from((credential.response as AuthenticatorAssertionResponse).signature).toString('base64url'),
+              userHandle: (credential.response as AuthenticatorAssertionResponse).userHandle ? 
+                Buffer.from((credential.response as AuthenticatorAssertionResponse).userHandle!).toString('base64url') : null
+            }
+          }
+        })
+      });
+      
+      const result = await verifyResponse.json();
+      
+      if (verifyResponse.ok && result.verified) {
+        setScanComplete(true);
+        const newUser = {
+          id: result.voterId,
+          aadhaarId,
+          isVerified: true,
+          hasVoted: {},
+          votingHistory: []
+        };
+        
+        setCurrentUser(newUser);
+        
+        try {
+          await refreshUserData(result.voterId);
+          console.log('✅ Real WebAuthn authentication successful!');
+        } catch (refreshError) {
+          console.error('Failed to refresh user data after login:', refreshError);
+        }
+        
+        setStep(4);
+      } else {
+        throw new Error(result.message || 'WebAuthn verification failed');
+      }
+      
+    } catch (err: any) {
+      console.error('Real WebAuthn failed, falling back to simulation:', err);
+      setError(`Real fingerprint failed: ${err.message}. Trying simulation...`);
+      
+      // Fallback to simulation if real WebAuthn fails
+      setTimeout(() => {
+        setError('');
+        handleSimulatedScan();
+      }, 1500);
+    } finally {
+      setIsScanning(false);
     }
   };
 
