@@ -20,9 +20,11 @@ class SyncService {
   private lastKnownState: SyncState | null = null;
   private isPolling = false;
   
-  // Configuration
+  // Configuration - Use local API in development, production API in production
   private readonly POLL_INTERVAL = 3000; // 3 seconds
-  private readonly API_BASE = 'https://dvotingsoftware.onrender.com/api';
+  private readonly API_BASE = window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000/api' 
+    : 'https://dvotingsoftware.onrender.com/api';
 
   /**
    * Initialize sync service with callbacks for state updates
@@ -69,7 +71,7 @@ class SyncService {
    */
   private async fetchUpdates() {
     try {
-      const response = await fetch(`${this.API_BASE}/elections/sync`, {
+      const response = await fetch(`${this.API_BASE}/sync/elections`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

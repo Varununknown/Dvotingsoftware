@@ -8,22 +8,29 @@ const rpName = "SecureVote";
 
 // Smart domain detection for hosted vs localhost
 const getWebAuthnConfig = () => {
-  // Check for production environment or render.com hosting
-  const isProduction = process.env.NODE_ENV === 'production' || 
-                      process.env.RENDER === 'true' ||
-                      process.env.PORT;
+  // Force development mode when running locally (check for Render deployment)
+  const isRenderDeployment = process.env.RENDER === 'true';
   
-  if (isProduction) {
+  if (!isRenderDeployment) {
+    // Development configuration for localhost testing 
+    console.log('🔧 Using LOCALHOST WebAuthn configuration for development');
+    return {
+      rpID: "localhost", // Localhost for development
+      validOrigins: [
+        "http://localhost:5173", 
+        "http://localhost:5174", 
+        "https://localhost:5173", 
+        "https://localhost:5174",
+        "http://localhost:4173", // Preview mode
+        "https://localhost:4173"
+      ]
+    };
+  } else {
     // Production/hosted configuration
+    console.log('🌐 Using PRODUCTION WebAuthn configuration for hosting');
     return {
       rpID: "dvotingsoftware.onrender.com", // Your hosted domain
       validOrigins: ["https://dvotingsoftware.onrender.com"] // HTTPS for hosted
-    };
-  } else {
-    // Development configuration  
-    return {
-      rpID: "localhost", // Localhost for development
-      validOrigins: ["http://localhost:5173", "http://localhost:5174", "https://localhost:5173", "https://localhost:5174"] // Support both HTTP and HTTPS for dev
     };
   }
 };
@@ -67,9 +74,22 @@ router.post("/register/options", async (req, res) => {
 
     const registrationOptions = await generateRegistrationOptions(options);
 
+    // Debug logging to see what's actually being sent
+    console.log('🔍 Generated registration options:', {
+      rpID: registrationOptions.rp.id,
+      rpName: registrationOptions.rp.name,
+      userID: registrationOptions.user.id,
+      challenge: registrationOptions.challenge.slice(0, 20) + '...'
+    });
+
     // Save challenge to voter record for verification
     voter.currentChallenge = registrationOptions.challenge;
     await voter.save();
+    
+    console.log('💾 Challenge saved to voter:', {
+      voterId: voter._id,
+      challengeSaved: voter.currentChallenge.slice(0, 20) + '...'
+    });
 
     res.json(registrationOptions);
   } catch (err) {
@@ -108,6 +128,13 @@ router.post("/register/verify", async (req, res) => {
     if (!voter) {
       return res.status(404).json({ message: "Voter not found" });
     }
+
+    console.log('🔍 Found voter:', {
+      id: voter._id,
+      aadhaarId: voter.aadhaarId,
+      hasChallengeField: !!voter.currentChallenge,
+      challengeValue: voter.currentChallenge ? voter.currentChallenge.substring(0, 20) + '...' : 'undefined'
+    });
 
     const expectedChallenge = voter.currentChallenge;
 
@@ -164,7 +191,11 @@ router.post("/register/verify", async (req, res) => {
     });
 
     if (verified && registrationInfo) {
-      const { credentialID, credentialPublicKey, counter } = registrationInfo;
+      // Extract credential data from the verification result
+      // The credential data is in registrationInfo.credential, not directly in registrationInfo
+      const credentialID = registrationInfo.credential?.id;
+      const credentialPublicKey = registrationInfo.credential?.publicKey; 
+      const counter = registrationInfo.credential?.counter || 0;
 
       // Store credential information in the voter record
       voter.credentials = voter.credentials || [];

@@ -31,8 +31,14 @@ class SmartBiometricService {
    */
   async detectCapabilities(): Promise<BiometricCapabilities> {
     const hasWebAuthn = !!window.PublicKeyCredential;
-    const isHostedDomain = window.location.hostname !== 'localhost' && 
-                          window.location.hostname !== '127.0.0.1';
+    const hostname = window.location.hostname;
+    const isHostedDomain = hostname !== 'localhost' && hostname !== '127.0.0.1';
+    
+    console.log('🔍 Domain detection:', {
+      hostname,
+      isHostedDomain,
+      fullUrl: window.location.href
+    });
     
     let hasPasskeySupport = false;
     let hasPlatformAuthenticator = false;
@@ -44,15 +50,33 @@ class SmartBiometricService {
         
         // Check for platform authenticator (built-in biometrics)
         hasPlatformAuthenticator = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+        
+        console.log('✅ WebAuthn capabilities detected:', {
+          hasPasskeySupport,
+          hasPlatformAuthenticator
+        });
       } catch (error) {
-        console.log('Advanced WebAuthn detection failed, using basic support');
+        console.log('⚠️ Advanced WebAuthn detection failed:', error);
+        console.log('Using basic WebAuthn support only');
       }
+    } else {
+      console.log('❌ WebAuthn not supported by this browser');
     }
     
-    // Recommend real auth only if we have good conditions
-    const recommendRealAuth = hasWebAuthn && 
-                             isHostedDomain && 
-                             hasPlatformAuthenticator;
+    // Allow real WebAuthn on both hosted domain AND localhost for development
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    const recommendRealAuth = hasWebAuthn && (isHostedDomain || isLocalhost) && hasPlatformAuthenticator;
+    
+    console.log('🎯 Final recommendation:', {
+      hasWebAuthn,
+      isHostedDomain,
+      isLocalhost,
+      hasPlatformAuthenticator,
+      recommendRealAuth,
+      reason: recommendRealAuth ? 
+        'Will attempt real WebAuthn' : 
+        `Skipping real WebAuthn: ${!hasWebAuthn ? 'No WebAuthn' : ''} ${!(isHostedDomain || isLocalhost) ? 'Not hosted/local' : ''} ${!hasPlatformAuthenticator ? 'No authenticator' : ''}`
+    });
     
     return {
       hasWebAuthn,
@@ -98,36 +122,56 @@ class SmartBiometricService {
    */
   private async performRealWebAuthnRegistration(aadhaarId: string): Promise<BiometricAuthResult> {
     try {
+      console.log('🔐 Starting REAL WebAuthn registration for:', aadhaarId);
+      
       // Step 1: Get registration options from server
-      const optionsResponse = await fetch(apiConfig.getURL('/webauthn/register/options'), {
+      const apiURL = apiConfig.getURL('/webauthn/register/options');
+      console.log('🌐 Making request to:', apiURL);
+      
+      const optionsResponse = await fetch(apiURL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ aadhaarId })
       });
       
+      console.log('📡 Server options response:', optionsResponse.status, optionsResponse.statusText);
+      
       if (!optionsResponse.ok) {
-        throw new Error('Failed to get registration options from server');
+        const errorData = await optionsResponse.json().catch(() => ({ message: 'Unknown server error' }));
+        throw new Error(`Server error: ${errorData.message || optionsResponse.statusText}`);
       }
       
       const options = await optionsResponse.json();
+      console.log('📋 Registration options received:', {
+        challenge: options.challenge ? 'Present' : 'Missing',
+        user: options.user ? 'Present' : 'Missing',
+        rp: options.rp ? options.rp.name : 'Missing'
+      });
       
       // Step 2: Create credential with real biometrics
+      console.log('👆 Prompting user for biometric registration...');
       const credential = await navigator.credentials.create({
         publicKey: {
           ...options,
-          challenge: new Uint8Array(Buffer.from(options.challenge, 'base64url')),
+          challenge: this.base64urlToUint8Array(options.challenge),
           user: {
             ...options.user,
-            id: new Uint8Array(Buffer.from(options.user.id, 'base64url'))
+            id: this.base64urlToUint8Array(options.user.id)
           }
         }
       }) as PublicKeyCredential;
       
       if (!credential) {
-        throw new Error('User cancelled biometric registration');
+        throw new Error('User cancelled biometric registration or no credential created');
       }
       
+      console.log('✅ Real biometric credential created:', {
+        id: credential.id.substring(0, 10) + '...',
+        type: credential.type
+      });
+      
       // Step 3: Verify registration with server
+      console.log('🔄 Verifying credential with server...');
       const verifyResponse = await fetch(apiConfig.getURL('/webauthn/register/verify'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -135,19 +179,21 @@ class SmartBiometricService {
           aadhaarId,
           attestationResponse: {
             id: credential.id,
-            rawId: Buffer.from(credential.rawId).toString('base64url'),
+            rawId: this.uint8ArrayToBase64url(new Uint8Array(credential.rawId)),
             type: credential.type,
             response: {
-              attestationObject: Buffer.from((credential.response as AuthenticatorAttestationResponse).attestationObject).toString('base64url'),
-              clientDataJSON: Buffer.from((credential.response as AuthenticatorAttestationResponse).clientDataJSON).toString('base64url')
+              attestationObject: this.uint8ArrayToBase64url(new Uint8Array((credential.response as AuthenticatorAttestationResponse).attestationObject)),
+              clientDataJSON: this.uint8ArrayToBase64url(new Uint8Array((credential.response as AuthenticatorAttestationResponse).clientDataJSON))
             }
           }
         })
       });
       
       const result = await verifyResponse.json();
+      console.log('🔍 Server verification response:', verifyResponse.status, result);
       
       if (verifyResponse.ok && result.verified) {
+        console.log('🎉 REAL WebAuthn registration successful!');
         return {
           success: true,
           method: 'real_webauthn',
@@ -159,7 +205,12 @@ class SmartBiometricService {
       }
       
     } catch (error: any) {
-      console.error('Real WebAuthn registration failed:', error);
+      console.error('❌ Real WebAuthn registration failed:', error);
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
       
       // Graceful fallback to simulation
       console.log('⚡ Falling back to simulation due to real WebAuthn failure');
@@ -189,10 +240,10 @@ class SmartBiometricService {
       const credential = await navigator.credentials.get({
         publicKey: {
           ...options,
-          challenge: new Uint8Array(Buffer.from(options.challenge, 'base64url')),
+          challenge: this.base64urlToUint8Array(options.challenge),
           allowCredentials: options.allowCredentials?.map((cred: any) => ({
             ...cred,
-            id: new Uint8Array(Buffer.from(cred.id, 'base64url'))
+            id: this.base64urlToUint8Array(cred.id)
           }))
         }
       }) as PublicKeyCredential;
@@ -209,14 +260,14 @@ class SmartBiometricService {
           aadhaarId,
           assertionResponse: {
             id: credential.id,
-            rawId: Buffer.from(credential.rawId).toString('base64url'),
+            rawId: this.uint8ArrayToBase64url(new Uint8Array(credential.rawId)),
             type: credential.type,
             response: {
-              authenticatorData: Buffer.from((credential.response as AuthenticatorAssertionResponse).authenticatorData).toString('base64url'),
-              clientDataJSON: Buffer.from((credential.response as AuthenticatorAssertionResponse).clientDataJSON).toString('base64url'),
-              signature: Buffer.from((credential.response as AuthenticatorAssertionResponse).signature).toString('base64url'),
+              authenticatorData: this.uint8ArrayToBase64url(new Uint8Array((credential.response as AuthenticatorAssertionResponse).authenticatorData)),
+              clientDataJSON: this.uint8ArrayToBase64url(new Uint8Array((credential.response as AuthenticatorAssertionResponse).clientDataJSON)),
+              signature: this.uint8ArrayToBase64url(new Uint8Array((credential.response as AuthenticatorAssertionResponse).signature)),
               userHandle: (credential.response as AuthenticatorAssertionResponse).userHandle ? 
-                Buffer.from((credential.response as AuthenticatorAssertionResponse).userHandle!).toString('base64url') : null
+                this.uint8ArrayToBase64url(new Uint8Array((credential.response as AuthenticatorAssertionResponse).userHandle!)) : null
             }
           }
         })
@@ -310,6 +361,36 @@ class SmartBiometricService {
         error: error.message
       };
     }
+  }
+
+  /**
+   * Browser-compatible utility methods for WebAuthn
+   */
+  private base64urlToUint8Array(base64url: string): Uint8Array {
+    // Convert base64url to base64
+    const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+    // Pad if necessary
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+    // Decode base64 to binary string
+    const binaryString = atob(padded);
+    // Convert to Uint8Array
+    const uint8Array = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      uint8Array[i] = binaryString.charCodeAt(i);
+    }
+    return uint8Array;
+  }
+
+  private uint8ArrayToBase64url(uint8Array: Uint8Array): string {
+    // Convert Uint8Array to binary string
+    let binaryString = '';
+    for (let i = 0; i < uint8Array.length; i++) {
+      binaryString += String.fromCharCode(uint8Array[i]);
+    }
+    // Encode to base64
+    const base64 = btoa(binaryString);
+    // Convert base64 to base64url
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
   }
 }
 

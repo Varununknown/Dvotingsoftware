@@ -124,8 +124,8 @@ app.use("/api/voting", votingRoutes);
 app.use("/api/candidates", candidateRoutes);
 app.use("/api/webauthn", webauthnRoutes);
 
-// Add sync routes for real-time updates (PRESERVE existing functionality)
-app.use("/api/elections", syncRoutes);
+// Sync routes for real-time updates (separate path to avoid ID conflicts)
+app.use("/api/sync", syncRoutes);
 
 // Health check endpoint (useful for deployment platforms)
 app.get('/health', (req, res) => {

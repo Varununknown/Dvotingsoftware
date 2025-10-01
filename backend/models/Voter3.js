@@ -27,6 +27,17 @@ const voterSchema = new mongoose.Schema({
   lastLogin: { type: Date },
   lockUntil: { type: Date },
   
+  // WebAuthn challenge for biometric registration
+  currentChallenge: { type: String },
+  
+  // WebAuthn credentials for real biometric authentication
+  credentials: [{
+    credentialID: { type: Buffer },
+    credentialPublicKey: { type: Buffer },
+    counter: { type: Number, default: 0 },
+    createdAt: { type: Date, default: Date.now }
+  }],
+  
   // Map to track whether voter has voted in each election (for quick lookups)
   hasVoted: {
     type: Map,

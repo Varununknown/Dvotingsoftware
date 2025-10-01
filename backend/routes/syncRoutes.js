@@ -8,10 +8,10 @@ let adminActions = [];
 let lastUpdateTimestamp = Date.now();
 
 /**
- * GET /api/elections/sync
+ * GET /api/sync/elections
  * Returns current election state with sync metadata
  */
-router.get('/sync', async (req, res) => {
+router.get('/elections', async (req, res) => {
   try {
     // Fetch all elections with latest data
     const elections = await Election.find({}).sort({ createdAt: -1 });
