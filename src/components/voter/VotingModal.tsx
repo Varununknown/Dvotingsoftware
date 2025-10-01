@@ -35,11 +35,20 @@ const VotingModal: React.FC<VotingModalProps> = ({ electionId, onClose }) => {
   const [previousVote, setPreviousVote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Reset modal state when modal opens/closes or election changes
   useEffect(() => {
     if (!election) {
+      // Reset all state when modal is closed or no election
+      setIsRevoting(false);
+      setPreviousVote(null);
+      setSelectedCandidate('');
+      setError(null);
       onClose();
       return;
     }
+
+    // Reset states for new modal opening
+    setError(null);
 
     console.log('Checking voting history for election:', electionId);
     console.log('Current user:', currentUser);
@@ -72,8 +81,9 @@ const VotingModal: React.FC<VotingModalProps> = ({ electionId, onClose }) => {
         }
       }
     } else {
-      console.log('User has not voted in this election yet');
+      console.log('User has not voted in this election yet - setting first vote mode');
       setIsRevoting(false);
+      setPreviousVote(null);
     }
   }, [election, onClose, currentUser, electionId]);
 
@@ -707,12 +717,12 @@ const VotingModal: React.FC<VotingModalProps> = ({ electionId, onClose }) => {
               <CheckCircle className="h-10 w-10 text-white" />
             </div>
             <h3 className="text-2xl font-bold text-slate-800 mb-4">
-              {isRevoting ? 'Vote Changed Successfully! 🎉' : 'Vote Cast Successfully! 🎉'}
+              {isRevoting ? 'Vote Changed Successfully! 🎉' : 'Vote Casted Successfully! 🎉'}
             </h3>
             <p className="text-slate-600 mb-6">
               {isRevoting 
                 ? 'Your vote has been changed and securely recorded on the blockchain ✅' 
-                : 'Your vote has been securely recorded on the blockchain ✅'}
+                : 'Your vote has been casted and securely recorded on the blockchain ✅'}
             </p>
             
             <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-6">
