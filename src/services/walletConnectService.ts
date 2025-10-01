@@ -15,8 +15,8 @@ export class WalletConnectService {
   private account: string | null = null;
   private chainId: number = 11155111; // Sepolia testnet
 
-  // Project ID from WalletConnect Cloud (you can get a free one)
-  private readonly PROJECT_ID = 'e-voting-demo-project-id'; // Replace with real project ID
+  // Project ID from WalletConnect Cloud - Get your free one at https://cloud.walletconnect.com
+  private readonly PROJECT_ID = '2f05a7b3b2c4e5d6f7a8b9c0d1e2f3a4'; // This is a demo ID - replace with real one
 
   constructor() {
     this.initializeWalletConnect();
