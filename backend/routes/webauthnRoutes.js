@@ -8,7 +8,10 @@ const rpName = "SecureVote";
 
 // Smart domain detection for hosted vs localhost
 const getWebAuthnConfig = () => {
-  const isProduction = process.env.NODE_ENV === 'production';
+  // Check for production environment or render.com hosting
+  const isProduction = process.env.NODE_ENV === 'production' || 
+                      process.env.RENDER === 'true' ||
+                      process.env.PORT;
   
   if (isProduction) {
     // Production/hosted configuration

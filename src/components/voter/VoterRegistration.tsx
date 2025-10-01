@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Smartphone, Fingerprint, AlertCircle, CheckCircle, ShieldAlert, Info, X, Copy } from 'lucide-react';
+import smartBiometricService, { BiometricCapabilities } from '../../services/smartBiometricService';
 import { useVoting } from '../../contexts/VotingContext';
 
 // API Configuration  
@@ -59,17 +60,29 @@ const VoterRegistration = () => {
   const [scanComplete, setScanComplete] = useState(false);
   const [error, setError] = useState('');
   const [webAuthnSupported, setWebAuthnSupported] = useState(false);
+  const [biometricCapabilities, setBiometricCapabilities] = useState<BiometricCapabilities | null>(null);
+  const [authMethod, setAuthMethod] = useState<'unknown' | 'real_webauthn' | 'simulation'>('unknown');
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [notificationType, setNotificationType] = useState<'success' | 'error' | 'info'>('info');
   // Removed usingWebAuthn state as we're only using simulated scan
   
-  // Check if WebAuthn is supported
+  // Check biometric capabilities when component loads
   useEffect(() => {
-    const checkWebAuthnSupport = () => {
-      return window.PublicKeyCredential !== undefined;
+    const detectCapabilities = async () => {
+      const capabilities = await smartBiometricService.detectCapabilities();
+      setBiometricCapabilities(capabilities);
+      setWebAuthnSupported(capabilities.hasWebAuthn);
+      
+      console.log('🔍 Biometric capabilities detected:', {
+        hasWebAuthn: capabilities.hasWebAuthn,
+        hasPlatformAuth: capabilities.hasPlatformAuthenticator,
+        isHosted: capabilities.isHostedDomain,
+        recommendReal: capabilities.recommendRealAuth
+      });
     };
-    setWebAuthnSupported(checkWebAuthnSupport());
+    
+    detectCapabilities();
   }, []);
 
   const handleAadhaarSubmit = async (e: React.FormEvent) => {
@@ -458,23 +471,38 @@ const VoterRegistration = () => {
   */
 
   const handleFingerprintScan = async () => {
-    // For now, always use simulation until we properly test real WebAuthn
-    // Real WebAuthn requires proper setup and testing on hosted environment
-    console.log('🔧 Using reliable simulated fingerprint scan for consistent experience');
-    handleSimulatedScan();
+    setIsScanning(true);
+    setError('');
     
-    // TODO: Enable real WebAuthn after proper testing and credential management
-    /*
-    const isHostedDomain = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-    
-    if (isHostedDomain && webAuthnSupported) {
-      console.log('🔐 Using real WebAuthn fingerprint registration on hosted domain');
-      await handleRealWebAuthnScan();
-    } else {
-      console.log('🔧 Using simulated fingerprint scan for localhost/unsupported browsers');
-      handleSimulatedScan();
+    try {
+      console.log('🔐 Starting smart biometric registration...');
+      
+      // Use the smart biometric service for real or simulated authentication
+      const result = await smartBiometricService.registerBiometric(aadhaarId);
+      
+      if (result.success) {
+        setScanComplete(true);
+        setAuthMethod(result.method);
+        
+        console.log(`✅ Biometric registration successful using: ${result.method}`);
+        console.log(`📋 ${result.message}`);
+        
+        // Show success message with method used
+        if (result.method === 'real_webauthn') {
+          setError(''); // Clear any errors
+        }
+        
+        setTimeout(() => setStep(4), 1000);
+      } else {
+        throw new Error(result.error || 'Biometric registration failed');
+      }
+    } catch (err: any) {
+      console.error('❌ Biometric registration error:', err);
+      setError(err.message || 'Failed to register biometric. Please try again.');
+      setScanComplete(false);
+    } finally {
+      setIsScanning(false);
     }
-    */
   };
 
   // Real WebAuthn implementation - currently disabled for testing
