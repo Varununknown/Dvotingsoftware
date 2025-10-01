@@ -34,37 +34,30 @@ const VotingModal: React.FC<VotingModalProps> = ({ electionId, onClose }) => {
   const [isRevoting, setIsRevoting] = useState(false);
   const [previousVote, setPreviousVote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isVoteChanged, setIsVoteChanged] = useState(false);
 
-  // Reset modal state when modal opens/closes or election changes
   useEffect(() => {
     if (!election) {
-      // Reset all state when modal is closed or no election
-      setIsRevoting(false);
-      setPreviousVote(null);
-      setSelectedCandidate('');
-      setError(null);
       onClose();
       return;
     }
-
-    // Reset states for new modal opening
-    setError(null);
 
     console.log('Checking voting history for election:', electionId);
     console.log('Current user:', currentUser);
     console.log('Voting history:', currentUser?.votingHistory);
 
-    // Check if the user has already voted in this election
+    // Check if the user has already voted in THIS SPECIFIC election
     // Look in both the hasVoted map and the voting history
     const hasVotedInMap = currentUser?.hasVoted?.[electionId];
     const hasVotedInHistory = currentUser?.votingHistory?.some(
       vote => vote.electionId === electionId
     );
     
-    console.log(`Vote status check - Map: ${hasVotedInMap}, History: ${hasVotedInHistory}`);
+    console.log(`Vote status check for election ${electionId} - Map: ${hasVotedInMap}, History: ${hasVotedInHistory}`);
     
+    // Only consider it revoting if they've voted in THIS specific election
     if (hasVotedInMap || hasVotedInHistory) {
-      console.log('User has already voted in this election - setting revoting mode');
+      console.log('User has already voted in THIS election - setting revoting mode');
       setIsRevoting(true);
       
       // Find the previous vote if available
@@ -73,7 +66,7 @@ const VotingModal: React.FC<VotingModalProps> = ({ electionId, onClose }) => {
       );
       
       if (previousVoteInfo) {
-        console.log('Found previous vote:', previousVoteInfo);
+        console.log('Found previous vote for this election:', previousVoteInfo);
         setPreviousVote(previousVoteInfo.candidateId);
         // Only pre-select if no candidate is currently selected (initial load)
         if (!selectedCandidate) {
@@ -81,11 +74,11 @@ const VotingModal: React.FC<VotingModalProps> = ({ electionId, onClose }) => {
         }
       }
     } else {
-      console.log('User has not voted in this election yet - setting first vote mode');
+      console.log('User has NOT voted in this election yet - first time voting');
       setIsRevoting(false);
       setPreviousVote(null);
     }
-  }, [election, onClose, currentUser, electionId]);
+  }, [election, onClose, currentUser, electionId, selectedCandidate]);
 
   if (!election) return null;
 
@@ -307,7 +300,14 @@ const VotingModal: React.FC<VotingModalProps> = ({ electionId, onClose }) => {
       try {
         // Call the voter API to record the vote directly
         console.log(`Submitting vote: electionId=${electionId}, candidateId=${selectedCandidate}`);
+        console.log(`Previous vote: ${previousVote}, Is revoting: ${isRevoting}`);
         console.log(`Current user ID: ${currentUser?.id}`);
+        
+        // Determine if this is truly a vote change
+        const isActuallyChangingVote = isRevoting && previousVote && previousVote !== selectedCandidate;
+        setIsVoteChanged(isActuallyChangingVote);
+        
+        console.log(`Vote change status: ${isActuallyChangingVote ? 'CHANGING VOTE' : 'NEW VOTE OR SAME VOTE'}`);
         
         const voteData = {
           electionId,
@@ -717,12 +717,12 @@ const VotingModal: React.FC<VotingModalProps> = ({ electionId, onClose }) => {
               <CheckCircle className="h-10 w-10 text-white" />
             </div>
             <h3 className="text-2xl font-bold text-slate-800 mb-4">
-              {isRevoting ? 'Vote Changed Successfully! 🎉' : 'Vote Casted Successfully! 🎉'}
+              {isVoteChanged ? 'Vote Changed Successfully! 🎉' : 'Vote Recorded Successfully! 🎉'}
             </h3>
             <p className="text-slate-600 mb-6">
-              {isRevoting 
+              {isVoteChanged
                 ? 'Your vote has been changed and securely recorded on the blockchain ✅' 
-                : 'Your vote has been casted and securely recorded on the blockchain ✅'}
+                : 'Your vote has been securely recorded on the blockchain ✅'}
             </p>
             
             <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-6">
