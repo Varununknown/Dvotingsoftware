@@ -117,6 +117,19 @@ const candidateRoutes = require("./routes/candidateRoutes");
 const webauthnRoutes = require("./routes/webauthnRoutes");
 const syncRoutes = require("./routes/syncRoutes");
 
+// Import and initialize blockchain service
+const { initializeBlockchain } = require("./services/blockchainService");
+
+// Initialize blockchain on startup
+console.log("🔗 Initializing blockchain service...");
+const blockchainInitialized = initializeBlockchain();
+if (blockchainInitialized) {
+  console.log("✅ Blockchain service ready for vote submissions!");
+} else {
+  console.warn("⚠️ Blockchain service failed to initialize. Votes will use mock hashes.");
+  console.warn("💡 Make sure VOTER_PRIVATE_KEY is set in .env file");
+}
+
 // Apply API routes
 app.use("/api/voters", voterRoutes);
 app.use("/api/elections", electionRoutes);

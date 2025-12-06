@@ -404,15 +404,17 @@ const VotingModal: React.FC<VotingModalProps> = ({ electionId, onClose }) => {
         throw new Error('❌ User ID is missing. Please log in again.');
       }
       
-      // Prepare vote data
+      // Prepare vote data WITH voter hash for blockchain submission
       const voteData = {
         electionId,
         candidateId: selectedCandidate,
         timestamp: new Date().toISOString(),
-        isRealBlockchainVote: true
+        isRealBlockchainVote: true,
+        voterAadhaarHash: currentUser?.aadhaarHash || currentUser?.aadharHash || 'test-voter-hash' // Include hash for blockchain
       };
       
       console.log('📤 Submitting to backend API:', voteData);
+      console.log('🔗 Voter hash included for blockchain:', voteData.voterAadhaarHash);
       
       // Submit vote to backend - THIS SHOULD RETURN A REAL TX HASH
       const response = await fetch(`${API_BASE_URL}/voters/${currentUser.id}/vote`, {
