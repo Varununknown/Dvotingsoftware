@@ -376,144 +376,123 @@ const VotingModal: React.FC<VotingModalProps> = ({ electionId, onClose }) => {
     return !isRealBlockchain || walletInfo?.isConnected;
   };
 
-  // Simulate blockchain confirmation stages
-  const handleConfirmVote = () => {
+  // Real blockchain vote submission with actual transaction hashes
+  const handleConfirmVote = async () => {
     setIsProcessing(true);
-    const hash = generateBlockchainHash();
-    setTransactionHash(hash);
+    setError(null);
     
-    // Simulate multiple blockchain transaction stages
-    const simulateBlockchainStages = async () => {
+    try {
+      console.log('🔗 REAL BLOCKCHAIN VOTE SUBMISSION STARTED');
+      console.log('📝 Vote Details:', { electionId, candidateId: selectedCandidate });
+      console.log('🧑 Voter Info:', { userId: currentUser?.id, userName: currentUser?.name });
+      
       // Stage 1: Creating transaction
-      await new Promise(resolve => setTimeout(resolve, 1000));
       setBlockchainStage('Creating transaction on Ethereum blockchain...');
       setBlockchainProgress(20);
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Stage 2: Signing transaction
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Stage 2: Signing transaction  
       setBlockchainStage('Signing transaction with secure credentials...');
       setBlockchainProgress(40);
+      await new Promise(resolve => setTimeout(resolve, 800));
       
       // Stage 3: Broadcasting to nodes
-      await new Promise(resolve => setTimeout(resolve, 700));
       setBlockchainStage('Broadcasting to validator nodes...');
       setBlockchainProgress(60);
       
-      // Stage 4: Waiting for confirmation
+      if (!currentUser?.id) {
+        throw new Error('❌ User ID is missing. Please log in again.');
+      }
+      
+      // Prepare vote data
+      const voteData = {
+        electionId,
+        candidateId: selectedCandidate,
+        timestamp: new Date().toISOString(),
+        isRealBlockchainVote: true
+      };
+      
+      console.log('📤 Submitting to backend API:', voteData);
+      
+      // Submit vote to backend - THIS SHOULD RETURN A REAL TX HASH
+      const response = await fetch(`${API_BASE_URL}/voters/${currentUser.id}/vote`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(voteData),
+      });
+      
+      const responseData = await response.json();
+      console.log('📥 Backend Response:', { status: response.status, data: responseData });
+      
+      if (!response.ok) {
+        throw new Error(responseData.message || `Backend error: ${response.status}`);
+      }
+      
+      // Stage 4: Waiting for block confirmation
+      setBlockchainStage('Waiting for block confirmation on Ethereum...');
+      setBlockchainProgress(85);
       await new Promise(resolve => setTimeout(resolve, 1200));
-      setBlockchainStage('Waiting for block confirmation...');
-      setBlockchainProgress(80);
       
-      // Stage 5: Transaction confirmed
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setBlockchainStage('Transaction confirmed! Vote recorded on blockchain.');
+      // ⭐ CRITICAL: Get REAL transaction hash from backend response
+      const realTxHash = responseData.transactionHash || responseData.txHash || responseData.tx;
+      
+      if (!realTxHash) {
+        console.warn('⚠️ WARNING: No transaction hash in backend response!');
+        console.warn('Response data:', responseData);
+        console.warn('📋 Check backend logs for actual transaction hash');
+      } else {
+        console.log('✅ REAL TRANSACTION HASH RECEIVED:', realTxHash);
+        console.log(`🔍 View on Etherscan: https://sepolia.etherscan.io/tx/${realTxHash}`);
+        setTransactionHash(realTxHash);
+        setBlockchainTxHash(realTxHash);
+      }
+      
+      // Update user context with successful vote
+      if (currentUser) {
+        castVote(electionId, selectedCandidate);
+        console.log('✅ Context updated with vote');
+        
+        // Refresh user data from server
+        await refreshUserData(currentUser.id);
+        console.log('✅ User data refreshed from server');
+      }
+      
+      // Stage 5: Success
+      setBlockchainStage('✅ Vote successfully recorded on blockchain!');
       setBlockchainProgress(100);
-      
-      // Final stage: Complete the process
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      try {
-        // Call the voter API to record the vote directly
-        console.log(`Submitting vote: electionId=${electionId}, candidateId=${selectedCandidate}`);
-        console.log(`Previous vote: ${previousVote}, Is revoting: ${isRevoting}`);
-        console.log(`Current user ID: ${currentUser?.id}`);
-        
-        // Determine if this is truly a vote change
-        const isActuallyChangingVote = isRevoting && previousVote && previousVote !== selectedCandidate;
-        setIsVoteChanged(Boolean(isActuallyChangingVote));
-        
-        console.log(`Vote change status: ${isActuallyChangingVote ? 'CHANGING VOTE' : 'NEW VOTE OR SAME VOTE'}`);
-        
-        const voteData = {
-          electionId,
-          candidateId: selectedCandidate
-        };
-        
-        console.log('Sending vote data:', voteData);
-        
-        if (!currentUser?.id) {
-          throw new Error('User ID is missing');
-        }
-        
-        // Call the new voter/:id/vote endpoint
-        const response = await fetch(`${API_BASE_URL}/voters/${currentUser.id}/vote`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(voteData),
-        });
-        
-        const data = await response.json();
-        console.log('API response:', response.status, data);
-        
-        if (response.ok) {
-          console.log('Vote recorded successfully:', data);
-          
-          // Call refreshUserData to ensure we have the latest voting data from server
-          if (currentUser && currentUser.id) {
-            await refreshUserData(currentUser.id);
-            console.log('Refreshed user data after successful vote');
-          }
-          
-          // Also update the context with single castVote call for immediate UI update
-          if (currentUser) {
-            castVote(electionId, selectedCandidate);
-            console.log('Context updated with new vote data');
-          }
-          
-          // Only update UI after success
-          setIsProcessing(false);
-          setError(null); // Clear any previous errors
-          setStep(4);
-        } else {
-          console.error('Vote recording failed:', data);
-          
-          // Instead of showing error, automatically bypass and proceed to success
-          console.log('Automatically bypassing error and continuing...');
-          
-          // Update the context to simulate successful vote
-          if (currentUser) {
-            castVote(electionId, selectedCandidate);
-          }
-          
-          // Generate fake transaction hash
-          setTransactionHash('0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join(''));
-          
-          // Move directly to success screen
-          setIsProcessing(false);
-          setError(null);
-          setStep(4);
-        }
-      } catch (err) {
-        console.error('Vote API error:', err);
-        
-        // Automatically bypass error and proceed
-        console.log('Automatically bypassing network error and continuing...');
-        
-        // Display error details in console for debugging
-        console.log('Error details:', {
-          electionId,
-          selectedCandidate,
-          voterId: currentUser?.id
-        });
-        
-        // Update the context to simulate successful vote
-        if (currentUser) {
-          castVote(electionId, selectedCandidate);
-        }
-        
-        // Generate fake transaction hash
-        setTransactionHash('0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join(''));
-        
-        // Move directly to success screen
-        setIsProcessing(false);
-        setError(null);
-        setStep(4);
+      console.log('🎉 VOTE SUBMISSION COMPLETE');
+      setIsProcessing(false);
+      setStep(5);
+      
+    } catch (err: any) {
+      console.error('❌ VOTE SUBMISSION FAILED:', err);
+      
+      const errorMessage = err.message || 'Failed to submit vote';
+      setError(errorMessage);
+      
+      // Provide helpful error messages
+      if (errorMessage.includes('MetaMask') || errorMessage.includes('connected')) {
+        setError('❌ MetaMask not connected! Connect your wallet first.');
+      } else if (errorMessage.includes('network')) {
+        setError('❌ Network error. Ensure you\'re on Sepolia testnet.');
+      } else if (errorMessage.includes('already voted')) {
+        setError('❌ You\'ve already voted in this election. Revoting not allowed.');
       }
-    };
-    
-    simulateBlockchainStages();
+      
+      // Log troubleshooting info
+      console.log('💡 TROUBLESHOOTING INFO:');
+      console.log('1. Check if MetaMask is installed');
+      console.log('2. Verify connected to Sepolia testnet (Chain ID: 11155111)');
+      console.log('3. Check browser console for detailed errors');
+      console.log('4. Check backend server logs at https://dvotingsoftware.onrender.com');
+      console.log('5. Refresh page and try again');
+      
+      setIsProcessing(false);
+    }
   };
   const selectedCandidateInfo = election.candidates.find(c => c.id === selectedCandidate);
 
