@@ -42,7 +42,7 @@ const LandingPage: React.FC = () => {
           */}
 
           <p className="text-base sm:text-lg text-slate-500 mb-8 sm:mb-12 max-w-2xl mx-auto px-4">
-            Accountability, Transparency, and tamper-proof elections powered by cutting-edge blockchain infrastructure.
+            Accountability, Transparency, and tamper-proof elections powered by cutting-edge blockchain technology.
           </p>
 
           {/* Role Selection Cards */}
