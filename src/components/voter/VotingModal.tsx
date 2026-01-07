@@ -468,7 +468,7 @@ const VotingModal: React.FC<VotingModalProps> = ({ electionId, onClose }) => {
       
       console.log('🎉 VOTE SUBMISSION COMPLETE');
       setIsProcessing(false);
-      setStep(5);
+      setStep(4);
       
     } catch (err: any) {
       console.error('❌ VOTE SUBMISSION FAILED:', err);
