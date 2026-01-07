@@ -106,9 +106,14 @@ async function submitVoteToBlockchain(voterAadhaarHash, electionId, candidateId)
     console.log('⏳ Waiting for blockchain confirmation...');
     const receipt = await transaction.wait(1);
     
+    if (!receipt) {
+      throw new Error('Transaction failed - no receipt returned');
+    }
+    
     console.log('🎉 Vote confirmed on blockchain!');
     console.log('✅ Block:', receipt.blockNumber);
     console.log('✅ Gas used:', receipt.gasUsed.toString());
+    console.log('✅ Transaction hash:', receipt.hash || transaction.hash);
     
     return {
       success: true,
@@ -118,11 +123,18 @@ async function submitVoteToBlockchain(voterAadhaarHash, electionId, candidateId)
     };
     
   } catch (error) {
-    console.error('❌ Blockchain submission failed:', error.message);
+    console.error('❌ Blockchain submission failed!');
+    console.error('Error message:', error.message);
+    console.error('Error details:', error);
+    console.error('💡 Possible solutions:');
+    console.error('1. Make sure contract address is correct:', CONTRACT_ADDRESS);
+    console.error('2. Make sure election exists and is active on blockchain');
+    console.error('3. Check VOTER_PRIVATE_KEY is valid');
+    console.error('4. Verify you have Sepolia testnet ETH for gas fees');
     throw {
       success: false,
-      error: error.message,
-      hint: 'Make sure VOTER_PRIVATE_KEY is set in .env file'
+      error: error.message || 'Unknown blockchain error',
+      hint: 'Check backend logs for details'
     };
   }
 }
