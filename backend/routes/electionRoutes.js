@@ -1,5 +1,6 @@
 const express = require("express");
 const Election = require("../models/Election");
+const { createElectionOnBlockchain } = require("../services/blockchainService");
 const router = express.Router();
 
 // 👉 Create a new election
@@ -17,6 +18,32 @@ router.post("/create", async (req, res) => {
     });
 
     await newElection.save();
+    
+    // 🔗 Try to create election on blockchain
+    try {
+      const startTimeMs = new Date(startDate).getTime();
+      const endTimeMs = new Date(endDate).getTime();
+      
+      console.log('🔗 Creating election on blockchain:', {
+        id: newElection._id.toString(),
+        title,
+        startTime: startTimeMs,
+        endTime: endTimeMs
+      });
+      
+      await createElectionOnBlockchain(
+        newElection._id.toString(),
+        title,
+        startTimeMs,
+        endTimeMs
+      );
+      console.log('✅ Election created on blockchain successfully');
+    } catch (blockchainError) {
+      console.warn('⚠️ Blockchain creation failed (will use mock hashes for votes):', blockchainError.message);
+      // Don't fail the whole request if blockchain fails
+      // Just warn and continue
+    }
+    
     res.json({ message: "Election created successfully ✅", election: newElection });
   } catch (err) {
     res.status(500).json({ error: err.message });

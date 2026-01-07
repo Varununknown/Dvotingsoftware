@@ -15,6 +15,18 @@ const SEPOLIA_RPC_PUBLIC = 'https://rpc.sepolia.org'; // Public Sepolia RPC
 const CONTRACT_ABI = [
   {
     "inputs": [
+      { "internalType": "string", "name": "electionId", "type": "string" },
+      { "internalType": "string", "name": "title", "type": "string" },
+      { "internalType": "uint256", "name": "startTime", "type": "uint256" },
+      { "internalType": "uint256", "name": "endTime", "type": "uint256" }
+    ],
+    "name": "createElection",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
       { "internalType": "string", "name": "voterAadhaarHash", "type": "string" },
       { "internalType": "string", "name": "electionId", "type": "string" },
       { "internalType": "string", "name": "candidateId", "type": "string" }
@@ -76,6 +88,51 @@ async function initializeBlockchain() {
   } catch (error) {
     console.error('❌ Failed to initialize blockchain:', error.message);
     return false;
+  }
+}
+
+/**
+ * Create an election on the blockchain
+ * Must be called before voting can happen
+ */
+async function createElectionOnBlockchain(electionId, title, startTime, endTime) {
+  try {
+    if (!contract) {
+      throw new Error('Blockchain service not initialized. Set VOTER_PRIVATE_KEY in .env');
+    }
+    
+    console.log('🔗 Creating election on blockchain...');
+    console.log('📝 Election:', { electionId, title, startTime, endTime });
+    
+    // Convert timestamps to seconds (blockchain uses seconds, not milliseconds)
+    const startTimeInSeconds = Math.floor(startTime / 1000);
+    const endTimeInSeconds = Math.floor(endTime / 1000);
+    
+    const transaction = await contract.createElection(
+      electionId,
+      title,
+      startTimeInSeconds,
+      endTimeInSeconds
+    );
+    
+    console.log('⏳ Election creation submitted:', transaction.hash);
+    console.log('🔗 View on Etherscan: https://sepolia.etherscan.io/tx/' + transaction.hash);
+    
+    const receipt = await transaction.wait(1);
+    
+    console.log('🎉 Election created on blockchain!');
+    console.log('✅ Block:', receipt.blockNumber);
+    
+    return {
+      success: true,
+      transactionHash: receipt.hash || transaction.hash,
+      blockNumber: receipt.blockNumber
+    };
+    
+  } catch (error) {
+    console.error('❌ Failed to create election on blockchain:', error.message);
+    console.error('Error details:', error);
+    throw error;
   }
 }
 
@@ -163,6 +220,7 @@ async function checkVoterStatus(voterAadhaarHash, electionId) {
 
 module.exports = {
   initializeBlockchain,
+  createElectionOnBlockchain,
   submitVoteToBlockchain,
   checkVoterStatus
 };
