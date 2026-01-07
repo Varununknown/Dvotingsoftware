@@ -9,7 +9,7 @@ const ethers = require('ethers');
 // Contract configuration
 const CONTRACT_ADDRESS = '0x184f2edaAB55FBe2060964db7DDb283F45C21A71';
 const SEPOLIA_RPC_URL = 'https://sepolia.infura.io/v3/YOUR_INFURA_KEY'; // Use public RPC or your key
-const SEPOLIA_RPC_PUBLIC = 'https://rpc.sepolia.org'; // Public Sepolia RPC
+const SEPOLIA_RPC_PUBLIC = 'https://sepolia.publicrpc.com'; // More reliable public RPC
 
 // Contract ABI (same as frontend)
 const CONTRACT_ABI = [
